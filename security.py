@@ -5,7 +5,7 @@ import time
 from collections import defaultdict, deque
 from functools import wraps
 
-from flask import abort, flash, g, redirect, request, session, url_for
+from flask import abort, current_app, flash, g, redirect, request, session, url_for
 
 UNSAFE_METHODS = ("POST", "PUT", "PATCH", "DELETE")
 
@@ -53,6 +53,14 @@ limiter = RateLimiter()
 
 
 def client_ip():
+    """Real visitor IP. When the site sits behind our Cloudflare Worker, the Worker passes the
+    visitor's IP in X-Client-IP together with a shared secret, so we only trust it if the secret matches."""
+    secret = current_app.config.get("PROXY_SECRET", "")
+    if secret:
+        sent = request.headers.get("X-Proxy-Secret", "")
+        ip = request.headers.get("X-Client-IP", "").strip()
+        if ip and sent and hmac.compare_digest(sent, secret):
+            return ip[:64]
     return request.remote_addr or "?"
 
 

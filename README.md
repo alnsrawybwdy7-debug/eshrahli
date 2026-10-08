@@ -90,6 +90,15 @@ nano .env     # الصق الإعدادات (DATABASE_URL فارغ + VERIFY_UPLO
 
 **التحديث بعدين:** `cd ~/eshrahli && git pull` بالـ Bash، ثم **Reload** من صفحة Web.
 
+## ربط دومين خاص (بدون اشتراك مدفوع)
+الموقع يبقى على PythonAnywhere، و Cloudflare Worker (`cloudflare-worker.js`) يعرضه على دومينك:
+1. ضيف الدومين لـ Cloudflare (Free plan) وغيّر الـ Nameservers عند الشركة اللي اشتريت منها.
+2. Workers & Pages ← Create ← Worker ← الصق `cloudflare-worker.js` ← Deploy.
+3. Worker Settings ← Variables: `ORIGIN=https://bo01.eu.pythonanywhere.com` و `PROXY_SECRET` (Secret).
+4. Worker Settings ← Domains & Routes ← Add Custom Domain ← دومينك.
+5. بـ `.env` على PythonAnywhere: نفس `PROXY_SECRET`، ثم Reload.
+6. ضيف `https://دومينك` لـ CORS بكت R2.
+
 ## الحماية المطبقة
 - كلمات المرور مشفرة (Werkzeug scrypt)، وحماية CSRF على كل الطلبات.
 - Rate limiting على تسجيل الدخول، إنشاء الحسابات، وإدخال الرموز (ضد التخمين).

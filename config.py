@@ -35,6 +35,8 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = _flag("COOKIE_SECURE")
     TRUST_PROXY = _flag("TRUST_PROXY")
+    # Shared secret with the Cloudflare Worker that serves the site on a custom domain
+    PROXY_SECRET = os.getenv("PROXY_SECRET", "").strip()
 
     # Site
     SITE_NAME = os.getenv("SITE_NAME", "اشرحلي")
