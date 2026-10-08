@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo, tg_icon %}
+{% block title %}الاشتراك{% endblock %}
+{% block content %}
+<div class="auth-wrap" style="max-width:520px">
+  {% if g.user.has_active_sub %}
+  <div class="card" style="margin-bottom:1rem">
+    <div class="sub-status">
+      <div class="big">{{ g.user.days_left }}</div>
+      <div>
+        <strong>يوم متبقي من اشتراكك</strong>
+        <div class="muted small">ينتهي {{ g.user.sub_expires_at|local }}</div>
+      </div>
+      <span class="spacer"></span>
+      <a class="btn btn-primary" href="{{ url_for('student.home') }}">المواد</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="auth-head">
+    <div class="brand-mark">{{ logo() }}</div>
+    <h1>{{ 'اشتراكك منتهي' if g.user.sub_status == 'expired' else 'فعّل اشتراكك' }}</h1>
+    <p class="muted">حتى تشوف الشروحات والملخصات والواجبات تحتاج اشتراك فعّال.</p>
+  </div>
+  {% endif %}
+
+  {% set msg = 'مرحبا، أريد اشتراك بمنصة ' ~ site_name ~ '. اسم المستخدم مالي: ' ~ g.user.username %}
+  <div class="card" style="margin-bottom:1rem">
+    <h2>1. راسلني على تيليكرام</h2>
+    <p class="muted">أرسلك رمز الاشتراك. الرسالة تنكتب لك تلقائياً وبيها اسم المستخدم مالك: <span class="ltr">{{ g.user.username }}</span></p>
+    <div class="contact-links">
+      {% if telegram %}
+      <a class="btn btn-tg btn-block" href="https://t.me/{{ telegram }}?text={{ msg|urlencode }}" target="_blank" rel="noopener">{{ tg_icon() }} مراسلة <span class="ltr">@{{ telegram }}</span></a>
+      {% endif %}
+      {% if whatsapp %}<a class="btn btn-block" href="https://wa.me/{{ whatsapp }}?text={{ msg|urlencode }}" target="_blank" rel="noopener">واتساب</a>{% endif %}
+      {% if not whatsapp and not telegram %}<span class="muted small">(ما مضافة معلومات تواصل بعد)</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. {{ 'مدّد اشتراكك' if g.user.has_active_sub else 'اكتب رمز الاشتراك' }}</h2>
+    <form method="post" autocomplete="off">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <input name="code" type="text" class="code-input" placeholder="XXXX-XXXX-XXXX" maxlength="20" required autocapitalize="characters" spellcheck="false" aria-label="رمز الاشتراك">
+        <span class="hint">كل رمز يشتغل مرة وحدة، ومدة الاشتراك تبدي من لحظة إدخاله{{ '، وتنضاف على المدة الباقية' if g.user.has_active_sub }}.</span>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">تفعيل</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

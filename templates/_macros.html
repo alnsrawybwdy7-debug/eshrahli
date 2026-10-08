@@ -1,0 +1,28 @@
+{% macro icon(kind) -%}
+{% if kind == 'video' -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+{%- elif kind == 'summary' -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+{%- elif kind == 'homework' -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>
+{%- else -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+{%- endif %}
+{%- endmacro %}
+
+{# Logo: a speech bubble with a play button — "explain it to me" #}
+{% macro logo() -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5h-6.2l-4.6 3.6a.6.6 0 0 1-1-.5v-3.1H5A2.5 2.5 0 0 1 2.5 15V6A2.5 2.5 0 0 1 5 3.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M10 7.7v5.6c0 .4.4.6.7.4l4.4-2.8a.5.5 0 0 0 0-.8l-4.4-2.8a.45.45 0 0 0-.7.4z" fill="currentColor"/></svg>
+{%- endmacro %}
+
+{% macro tg_icon() -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.4 3.6 2.9 10.7c-1.3.5-1.2 1.3-.2 1.6l4.7 1.5 1.8 5.6c.2.7.4.9.9.9.4 0 .6-.2.9-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.4-1.5zM8.6 13.4l9.6-6c.5-.3.9-.1.5.2l-8.2 7.4-.3 3.4z"/></svg>
+{%- endmacro %}
+
+{% macro sub_badge(u) -%}
+{% if u.is_blocked %}<span class="badge danger">موقوف</span>
+{% elif u.sub_status == 'active' %}<span class="badge ok">فعّال · {{ u.days_left }} يوم</span>
+{% elif u.sub_status == 'expired' %}<span class="badge warn">منتهي</span>
+{% elif u.sub_status == 'admin' %}<span class="badge">أدمن</span>
+{% else %}<span class="badge">غير مشترك</span>{% endif %}
+{%- endmacro %}

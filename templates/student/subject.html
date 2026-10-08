@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}{{ s.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{{ url_for('student.home') }}">المواد</a> / {{ s.name }}</div>
+    <h1>{{ s.name }}</h1>
+    {% if s.description %}<p class="muted">{{ s.description }}</p>{% endif %}
+  </div>
+  {% if g.user.is_admin %}<a class="btn" href="{{ url_for('admin.subject', sid=s.id, tab=tab) }}">تعديل المادة</a>{% endif %}
+</div>
+
+<nav class="tabs">
+  {% for k in ('video', 'summary', 'homework') %}
+  <a href="{{ url_for('student.subject', sid=s.id, tab=k) }}" class="{{ 'active' if tab == k }}">{{ KIND_LABELS[k] }}<span class="count">{{ counts.get(k, 0) }}</span></a>
+  {% endfor %}
+</nav>
+
+{% if items %}
+<div class="list">
+  {% for c in items %}
+  {% if tab == 'video' %}
+  <a class="item {{ 'dim' if not c.is_visible }}" href="{{ url_for('student.watch', cid=c.id) }}">
+    <span class="num">{{ loop.index }}</span>
+    <span class="item-icon">{{ icon('video') }}</span>
+    <span class="body">
+      <span class="title">{{ c.title }}</span>
+      {% if c.description %}<span class="sub">{{ c.description|truncate(120) }}</span>{% endif %}
+    </span>
+  </a>
+  {% else %}
+  <div class="item {{ 'dim' if not c.is_visible }}">
+    <span class="item-icon">{{ icon(c.kind) }}</span>
+    <div class="body">
+      <span class="title">{{ c.title }}</span>
+      <span class="sub">{% if c.description %}{{ c.description }} · {% endif %}{{ c.filename.rsplit('.', 1)[-1]|upper }} · {{ c.size|filesize }} · {{ c.created_at|local('%Y/%m/%d') }}</span>
+    </div>
+    <div class="item-actions">
+      <a class="btn btn-sm" href="{{ url_for('student.file', cid=c.id) }}" target="_blank" rel="noopener">فتح</a>
+      <a class="btn btn-sm btn-ghost" href="{{ url_for('student.file', cid=c.id, dl=1) }}">تنزيل</a>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">ماكو {{ KIND_LABELS[tab] }} لهاي المادة بعد.</div>
+{% endif %}
+{% endblock %}

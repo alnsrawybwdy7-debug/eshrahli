@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sub_badge %}
+{% block title %}حسابي{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>حسابي</h1></div></div>
+<div class="two-col even">
+  <div class="card">
+    <h2>معلومات الحساب</h2>
+    <table>
+      <tr><th>الاسم</th><td>{{ g.user.name }}</td></tr>
+      <tr><th>اسم المستخدم</th><td class="ltr">{{ g.user.username }}</td></tr>
+      <tr><th>الاشتراك</th><td>{{ sub_badge(g.user) }}</td></tr>
+      {% if g.user.sub_expires_at and not g.user.is_admin %}
+      <tr><th>ينتهي بتاريخ</th><td>{{ g.user.sub_expires_at|local }}</td></tr>
+      {% endif %}
+    </table>
+    <div class="row" style="margin-top:1rem">
+      {% if not g.user.is_admin %}<a class="btn" href="{{ url_for('student.subscribe') }}">تجديد / تفعيل الاشتراك</a>{% endif %}
+      {% if telegram_url %}<a class="btn btn-ghost" href="{{ telegram_url }}" target="_blank" rel="noopener">تواصل <span class="ltr">@{{ telegram_user }}</span></a>{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('auth.logout') }}" style="margin-top:1rem">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-danger btn-block" type="submit">تسجيل الخروج</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>تغيير كلمة المرور</h2>
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field"><label for="current">كلمة المرور الحالية</label><input id="current" name="current" type="password" class="ltr" autocomplete="current-password" required></div>
+      <div class="field"><label for="new">كلمة المرور الجديدة</label><input id="new" name="new" type="password" class="ltr" autocomplete="new-password" minlength="8" required></div>
+      <div class="field"><label for="confirm">تأكيدها</label><input id="confirm" name="confirm" type="password" class="ltr" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn btn-primary" type="submit">حفظ</button>
+      <p class="muted small" style="margin-top:.6rem">تغيير كلمة المرور يطلّعك من باقي الأجهزة.</p>
+    </form>
+  </div>
+</div>
+{% endblock %}

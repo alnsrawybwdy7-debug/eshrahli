@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sub_badge %}
+{% block title %}الطلاب{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>الطلاب</h1></div></div>
+{% include "admin/_nav.html" %}
+
+<form class="row" method="get" style="margin-bottom:1rem">
+  <input type="search" name="q" value="{{ q }}" placeholder="بحث بالاسم أو اسم المستخدم" style="max-width:320px">
+  <select name="status" style="max-width:180px">
+    {% for key, label in [('all', 'الكل'), ('active', 'فعّال'), ('expired', 'منتهي'), ('none', 'غير مشترك'), ('blocked', 'موقوف')] %}
+    <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn" type="submit">بحث</button>
+  <span class="muted small">{{ items|length }} طالب</span>
+</form>
+
+{% if items %}
+<div class="list">
+  {% for u in items %}
+  <div class="item admin-item">
+    <div class="subject-initial">{{ u.name[:1] }}</div>
+    <div class="body">
+      <span class="title">{{ u.name }} <span class="muted small ltr">@{{ u.username }}</span></span>
+      <span class="sub">
+        {{ sub_badge(u) }}
+        {% if u.sub_expires_at %} ينتهي {{ u.sub_expires_at|local('%Y/%m/%d') }}{% endif %}
+        · آخر دخول {{ u.last_login_at|local('%m/%d %I:%M %p') }}
+      </span>
+    </div>
+    <details class="box">
+      <summary>إجراءات</summary>
+      <div class="stack">
+        <form class="row" method="post" action="{{ url_for('admin.user_action', uid=u.id) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="add_days">
+          <input type="hidden" name="back" value="{{ request.full_path }}">
+          <input type="number" name="days" value="30" min="-730" max="730" style="width:90px">
+          <button class="btn btn-sm btn-primary" type="submit">إضافة أيام</button>
+        </form>
+        <form class="btn-group" method="post" action="{{ url_for('admin.user_action', uid=u.id) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="back" value="{{ request.full_path }}">
+          {% if u.sub_status == 'active' %}<button class="btn btn-sm" name="action" value="end_sub">إنهاء الاشتراك</button>{% endif %}
+          <button class="btn btn-sm" name="action" value="logout_all">خروج من كل الأجهزة</button>
+          <button class="btn btn-sm" name="action" value="reset_pw">كلمة مرور مؤقتة</button>
+          {% if u.is_blocked %}
+          <button class="btn btn-sm" name="action" value="unblock">رفع الإيقاف</button>
+          {% else %}
+          <button class="btn btn-sm btn-danger" name="action" value="block">إيقاف الحساب</button>
+          {% endif %}
+        </form>
+      </div>
+    </details>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">ماكو طلاب.</div>
+{% endif %}
+{% endblock %}

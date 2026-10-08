@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo, tg_icon %}
+{% block title %}تسجيل الدخول{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-head">
+    <div class="brand-mark">{{ logo() }}</div>
+    <h1>{{ site_name }}</h1>
+    <p class="muted">{{ site_tagline }}. سجّل دخولك حتى توصل للمواد.</p>
+  </div>
+  <div class="card">
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="username">اسم المستخدم</label>
+        <input id="username" name="username" type="text" class="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{ username or '' }}" required>
+      </div>
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input id="password" name="password" type="password" class="ltr" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">دخول</button>
+    </form>
+  </div>
+  <p class="muted small" style="text-align:center;margin-top:1rem">ما عندك حساب؟ <a href="{{ url_for('auth.register') }}">سوّي حساب جديد</a></p>
+</div>
+{% endblock %}

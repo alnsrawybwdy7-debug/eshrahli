@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}خطأ {{ code }}{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="card" style="text-align:center">
+    <h1>{{ code }}</h1>
+    <p class="muted">{{ message }}</p>
+    <a class="btn btn-primary" href="{{ url_for('student.home') }}">رجوع للرئيسية</a>
+  </div>
+</div>
+{% endblock %}

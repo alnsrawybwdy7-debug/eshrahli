@@ -1,0 +1,7 @@
+{% set ep = request.endpoint or '' %}
+<nav class="tabs">
+  <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep == 'admin.dashboard' }}">الرئيسية</a>
+  <a href="{{ url_for('admin.subjects') }}" class="{{ 'active' if ep in ('admin.subjects', 'admin.subject') }}">المواد والمحتوى</a>
+  <a href="{{ url_for('admin.codes') }}" class="{{ 'active' if ep == 'admin.codes' }}">رموز الاشتراك</a>
+  <a href="{{ url_for('admin.users') }}" class="{{ 'active' if ep == 'admin.users' }}">الطلاب</a>
+</nav>

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}{{ s.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{{ url_for('admin.subjects') }}">المواد</a> / {{ s.name }}</div>
+    <h1>{{ s.name }} {% if not s.is_visible %}<span class="badge warn">مخفية</span>{% endif %}</h1>
+  </div>
+  <a class="btn" href="{{ url_for('student.subject', sid=s.id, tab=tab) }}">معاينة كطالب</a>
+</div>
+
+<nav class="tabs">
+  {% for k in ('video', 'summary', 'homework') %}
+  <a href="{{ url_for('admin.subject', sid=s.id, tab=k) }}" class="{{ 'active' if tab == k }}">{{ KIND_LABELS[k] }}<span class="count">{{ counts.get(k, 0) }}</span></a>
+  {% endfor %}
+</nav>
+
+<div class="two-col">
+  <section class="stack">
+    <div class="uploader" id="uploader"
+         data-url="{{ url_for('admin.upload_url') }}"
+         data-create="{{ url_for('admin.content_create', sid=s.id) }}"
+         data-subject="{{ s.id }}" data-kind="{{ tab }}">
+      <h3>رفع {{ KIND_SINGULAR[tab] }} جديد</h3>
+      <form id="upload-form">
+        <div class="field">
+          <label for="up-file">الملف</label>
+          <input id="up-file" type="file" accept="{{ accept }}" required>
+          <span class="hint">المسموح: {{ accept.replace(',', ' ') }}{% if tab == 'video' %} — الأفضل MP4 (H.264) حتى يشتغل على كل الأجهزة{% endif %}</span>
+        </div>
+        <div class="form-row">
+          <div class="field"><label for="up-title">العنوان</label><input id="up-title" type="text" maxlength="200" placeholder="إذا تتركه فارغ ياخذ اسم الملف"></div>
+        </div>
+        <div class="field"><label for="up-desc">وصف (اختياري)</label><textarea id="up-desc" maxlength="2000"></textarea></div>
+        <label class="check" style="margin-bottom:.8rem"><input type="checkbox" id="up-visible" checked> ينشر للطلاب مباشرة</label>
+        <button class="btn btn-primary" type="submit" id="up-btn">رفع</button>
+        <div class="progress" hidden id="up-progress"><div></div></div>
+        <div class="upload-status" id="up-status"></div>
+      </form>
+    </div>
+
+    {% if items %}
+    <div class="list">
+      {% for c in items %}
+      <div class="item admin-item {{ 'dim' if not c.is_visible }}">
+        <span class="item-icon">{{ icon(c.kind) }}</span>
+        <div class="body">
+          <span class="title">{{ c.title }} {% if not c.is_visible %}<span class="badge warn">مخفي</span>{% endif %}</span>
+          <span class="sub">{{ c.filename }} · {{ c.size|filesize }} · {{ c.created_at|local('%Y/%m/%d') }}</span>
+          <details class="box" style="margin-top:.5rem">
+            <summary>تعديل</summary>
+            <form method="post" action="{{ url_for('admin.content_edit', cid=c.id) }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <div class="field"><label>العنوان</label><input name="title" type="text" value="{{ c.title }}" maxlength="200" required></div>
+              <div class="field"><label>الوصف</label><textarea name="description" maxlength="2000">{{ c.description or '' }}</textarea></div>
+              <button class="btn btn-sm btn-primary" type="submit">حفظ</button>
+            </form>
+          </details>
+        </div>
+        <div class="item-actions">
+          <form class="inline" method="post" action="{{ url_for('admin.content_action', cid=c.id) }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-ghost" name="action" value="up" {% if loop.first %}disabled{% endif %} title="لفوك">▲</button>
+            <button class="btn btn-sm btn-ghost" name="action" value="down" {% if loop.last %}disabled{% endif %} title="لجوه">▼</button>
+            <button class="btn btn-sm" name="action" value="toggle">{{ 'إخفاء' if c.is_visible else 'إظهار' }}</button>
+          </form>
+          <a class="btn btn-sm" href="{{ url_for('student.watch' if c.kind == 'video' else 'student.file', cid=c.id) }}" target="_blank" rel="noopener">فتح</a>
+          <form class="inline" method="post" action="{{ url_for('admin.content_action', cid=c.id) }}" data-confirm="تحذف «{{ c.title }}» نهائياً؟">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" name="action" value="delete">حذف</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">ماكو {{ KIND_LABELS[tab] }} بهاي المادة. ارفع أول واحد من فوك.</div>
+    {% endif %}
+  </section>
+
+  <aside class="stack">
+    <div class="card">
+      <h3>معلومات المادة</h3>
+      <form method="post" action="{{ url_for('admin.subject', sid=s.id, tab=tab) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><label for="sname">الاسم</label><input id="sname" name="name" type="text" value="{{ s.name }}" required maxlength="150"></div>
+        <div class="field"><label for="sdesc">الوصف</label><textarea id="sdesc" name="description" maxlength="2000">{{ s.description or '' }}</textarea></div>
+        <label class="check" style="margin-bottom:.8rem"><input type="checkbox" name="is_visible" value="1" {% if s.is_visible %}checked{% endif %}> ظاهرة للطلاب</label>
+        <button class="btn btn-primary btn-block" type="submit">حفظ</button>
+      </form>
+    </div>
+    <details class="box">
+      <summary>حذف المادة</summary>
+      <form method="post" action="{{ url_for('admin.subject_delete', sid=s.id) }}" data-confirm="راح تنحذف المادة وكل الفيديوات والملفات اللي بيها. متأكد؟">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <p class="small muted">يحذف المادة وكل محتواها من التخزين. اكتب اسم المادة للتأكيد:</p>
+        <div class="field"><input name="confirm_name" type="text" placeholder="{{ s.name }}" required></div>
+        <button class="btn btn-danger btn-block" type="submit">حذف نهائي</button>
+      </form>
+    </details>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/upload.js') }}"></script>{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}البث المباشر{% endblock %}
+{% block content %}
+{% if not s %}
+  <div class="page-head"><div><h1>البث المباشر</h1></div></div>
+  {% if g.user.is_admin %}
+    <div class="card" style="max-width:520px">
+      <h2>ابدأ بث جديد</h2>
+      {% if not livekit_on %}<div class="notice">البث يحتاج إعدادات LiveKit بملف <span class="ltr">.env</span> (شوف README).</div>{% endif %}
+      <form method="post" action="{{ url_for('live.start') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><label for="title">عنوان البث</label><input id="title" name="title" type="text" placeholder="مثلاً: مراجعة الفصل الثالث" required maxlength="200"></div>
+        <button class="btn btn-live" type="submit">بدء البث وإظهاره للمشتركين</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="empty">
+      <h2>ماكو بث هسه</h2>
+      <p>أول ما يبدي البث، يطلعلك زر "انضمام للاتصال" بأعلى كل الصفحات.</p>
+    </div>
+  {% endif %}
+{% else %}
+<div id="live-root"
+     data-token-url="{{ url_for('live.token') }}"
+     data-status-url="{{ url_for('student.live_status') }}"
+     data-session-id="{{ s.id }}"
+     data-is-admin="{{ '1' if g.user.is_admin else '0' }}"
+     data-me="u{{ g.user.id }}">
+  <div class="page-head">
+    <div>
+      <div class="row"><span class="badge live"><span class="pulse"></span> مباشر</span>{% if s.subject %}<span class="badge">{{ s.subject.name }}</span>{% endif %}</div>
+      <h1 style="margin-top:.4rem">{{ s.title }}</h1>
+      <p class="muted small">بدأ {{ s.started_at|local('%I:%M %p') }}</p>
+    </div>
+    {% if g.user.is_admin %}
+    <form method="post" action="{{ url_for('live.end') }}" data-confirm="متأكد تريد تنهي البث لكل المشتركين؟">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-danger" type="submit">إنهاء البث</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if not livekit_on %}
+    <div class="notice">إعدادات LiveKit ناقصة بالسيرفر، فالاتصال ما يشتغل. {% if g.user.is_admin %}ضيف LIVEKIT_URL و LIVEKIT_API_KEY و LIVEKIT_API_SECRET.{% endif %}</div>
+  {% endif %}
+
+  <div class="two-col">
+    <section>
+      <div id="join-box" class="card" style="text-align:center;padding:2.2rem 1rem">
+        <h2>جاهز تنضم؟</h2>
+        <p class="muted">{% if g.user.is_admin %}راح تدخلين باسم {{ g.user.name }} ({{ teacher_label }})، وتكدرين تشاركين الكاميرا والشاشة.{% else %}راح تدخل والمايك والكاميرا مطفيات. تكدر تشغلهن بعدين.{% endif %}</p>
+        <button id="join-btn" class="btn btn-live" type="button" {% if not livekit_on %}disabled{% endif %}>انضمام للاتصال</button>
+        <p id="join-error" class="small" style="color:var(--danger);margin-top:.75rem" hidden></p>
+      </div>
+
+      <div id="stage-box" hidden>
+        <div id="stage" class="live-stage"></div>
+        <div class="live-controls">
+          <button class="btn" id="btn-mic" type="button">تشغيل المايك</button>
+          <button class="btn" id="btn-cam" type="button">تشغيل الكاميرا</button>
+          {% if g.user.is_admin %}<button class="btn" id="btn-screen" type="button">مشاركة الشاشة</button>{% endif %}
+          <button class="btn btn-danger" id="btn-leave" type="button">مغادرة</button>
+        </div>
+        <div id="audio-sink" hidden></div>
+      </div>
+
+      <div id="ended-box" class="empty" hidden>
+        <h2 id="ended-title">انتهى البث</h2>
+        <div class="row" style="justify-content:center">
+          <a class="btn" href="{{ url_for('live.room') }}">رجوع للاتصال</a>
+          <a class="btn btn-ghost" href="{{ url_for('student.home') }}">المواد</a>
+        </div>
+      </div>
+    </section>
+
+    <aside class="stack">
+      <div class="card flat">
+        <div class="row between"><h3 style="margin:0">الحاضرين</h3><span class="badge" id="people-count">0</span></div>
+        <div class="people" id="people" style="margin-top:.6rem"></div>
+      </div>
+      <div class="card flat">
+        <h3>الدردشة</h3>
+        <div class="chat-log" id="chat-log"><span class="muted small">الرسائل تطلع هنا أثناء البث.</span></div>
+        <form class="chat-form" id="chat-form" autocomplete="off">
+          <input type="text" id="chat-input" maxlength="500" placeholder="اكتب سؤالك..." disabled>
+          <button class="btn btn-primary btn-sm" type="submit" disabled id="chat-send">إرسال</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if s %}
+<script src="{{ url_for('static', filename='vendor/livekit-client-2.22.3.umd.js') }}"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+{% endif %}
+{% endblock %}

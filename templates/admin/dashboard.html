@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>لوحة التحكم</h1></div></div>
+{% include "admin/_nav.html" %}
+
+{% if not r2_on %}
+<div class="notice">الملفات تنخزن حالياً على السيرفر نفسه (تخزين محلي). للفيديوات الكبيرة اربط Cloudflare R2 من ملف <span class="ltr">.env</span>.</div>
+{% endif %}
+
+<div class="stats">
+  <div class="stat"><div class="n">{{ stats.active }}</div><div class="l">مشترك فعّال</div></div>
+  <div class="stat"><div class="n">{{ stats.students }}</div><div class="l">كل الطلاب</div></div>
+  <div class="stat"><div class="n">{{ stats.unused_codes }}</div><div class="l">رمز غير مستخدم</div></div>
+  <div class="stat"><div class="n">{{ stats.subjects }}</div><div class="l">مادة</div></div>
+  <div class="stat"><div class="n">{{ stats.videos }}</div><div class="l">فيديو</div></div>
+  <div class="stat"><div class="n">{{ stats.files }}</div><div class="l">ملخص وواجب</div></div>
+</div>
+
+<div class="two-col">
+  <div class="stack">
+    <div class="card">
+      {% if live %}
+        <div class="row between">
+          <div>
+            <span class="badge live"><span class="pulse"></span> البث شغّال</span>
+            <h2 style="margin:.5rem 0 0">{{ live.title }}</h2>
+            <p class="muted small">بدأ {{ live.started_at|local }}</p>
+          </div>
+          <div class="btn-group">
+            <a class="btn btn-live" href="{{ url_for('live.room') }}">دخول الغرفة</a>
+            <form class="inline" method="post" action="{{ url_for('live.end') }}" data-confirm="تنهي البث لكل المشتركين؟">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <button class="btn btn-danger" type="submit">إنهاء</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <h2>بث مباشر</h2>
+        {% if not livekit_on %}<div class="notice">ضيف إعدادات LiveKit بملف <span class="ltr">.env</span> حتى يشتغل الاتصال.</div>{% endif %}
+        <form method="post" action="{{ url_for('live.start') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="form-row">
+            <div class="field"><label for="ltitle">العنوان</label><input id="ltitle" name="title" type="text" placeholder="مراجعة قبل الامتحان" required maxlength="200"></div>
+            <div class="field"><label for="lsubject">المادة (اختياري)</label>
+              <select id="lsubject" name="subject_id"><option value="">—</option>{% for s in subjects %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+            </div>
+          </div>
+          <button class="btn btn-live" type="submit">بدء البث</button>
+          <span class="muted small">يطلع زر "انضمام" لكل المشتركين فوراً.</span>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="row between"><h2 style="margin:0">آخر التفعيلات</h2><a class="small" href="{{ url_for('admin.codes', status='used') }}">الكل</a></div>
+      {% if recent %}
+      <div class="table-wrap" style="margin-top:.75rem">
+        <table>
+          <tr><th>الطالب</th><th>المدة</th><th>الوقت</th></tr>
+          {% for c in recent %}
+          <tr><td>{{ c.used_by.name }} <span class="muted small ltr">@{{ c.used_by.username }}</span></td><td>{{ c.days }} يوم</td><td class="small">{{ c.used_at|local }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% else %}<p class="muted" style="margin-top:.75rem">ماكو تفعيلات بعد.</p>{% endif %}
+    </div>
+  </div>
+
+  <aside class="stack">
+    <div class="card">
+      <h3>اختصارات</h3>
+      <div class="stack">
+        <a class="btn btn-block btn-primary" href="{{ url_for('admin.codes') }}">توليد رموز اشتراك</a>
+        <a class="btn btn-block" href="{{ url_for('admin.subjects') }}">رفع فيديو أو ملف</a>
+        <a class="btn btn-block" href="{{ url_for('student.home') }}">شوف المنصة كطالب</a>
+      </div>
+    </div>
+    <div class="card">
+      <h3>اشتراكات تنتهي خلال 3 أيام</h3>
+      {% if expiring %}
+      <div class="list">
+        {% for u in expiring %}
+        <div class="row between small"><span>{{ u.name }}</span><span class="badge warn">{{ u.sub_expires_at|local('%m/%d %I:%M %p') }}</span></div>
+        {% endfor %}
+      </div>
+      {% else %}<p class="muted small">ماكو.</p>{% endif %}
+    </div>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}المواد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>أهلاً {{ g.user.name.split()[0] }}</h1>
+    <p class="muted">{% if g.user.is_admin %}هذي الواجهة مثل ما يشوفها الطلاب.{% else %}باقي من اشتراكك {{ g.user.days_left }} يوم.{% endif %}</p>
+  </div>
+  {% if g.user.is_admin %}<a class="btn" href="{{ url_for('admin.subjects') }}">إدارة المواد</a>{% endif %}
+</div>
+
+{% if subjects %}
+<div class="grid">
+  {% for s in subjects %}
+  {% set c = counts.get(s.id, {}) %}
+  <a class="card subject-card" href="{{ url_for('student.subject', sid=s.id) }}">
+    <div class="row">
+      <div class="subject-initial">{{ s.name[:1] }}</div>
+      <h3 style="margin:0">{{ s.name }}</h3>
+      {% if not s.is_visible %}<span class="badge warn">مخفية</span>{% endif %}
+    </div>
+    {% if s.description %}<div class="desc">{{ s.description }}</div>{% endif %}
+    <div class="meta">
+      <span class="badge">{{ c.get('video', 0) }} فيديو</span>
+      <span class="badge">{{ c.get('summary', 0) }} ملخص</span>
+      <span class="badge">{{ c.get('homework', 0) }} واجب</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">ماكو مواد بعد. ترجع قريباً إن شاء الله.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo, tg_icon %}
+{% block title %}حساب جديد{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-head">
+    <div class="brand-mark">{{ logo() }}</div>
+    <h1>حساب جديد</h1>
+    <p class="muted">بعد التسجيل تفعّل اشتراكك برمز من المطور</p>
+  </div>
+  <div class="card">
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="name">الاسم الثلاثي</label>
+        <input id="name" name="name" type="text" autocomplete="name" value="{{ form.name or '' }}" required maxlength="80">
+      </div>
+      <div class="field">
+        <label for="username">اسم المستخدم</label>
+        <input id="username" name="username" type="text" class="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{ form.username or '' }}" required pattern="[A-Za-z0-9_.]{3,32}">
+        <span class="hint">حروف إنكليزية وأرقام فقط، مثل ali.hassan</span>
+      </div>
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input id="password" name="password" type="password" class="ltr" autocomplete="new-password" minlength="8" required>
+        <span class="hint">8 أحرف أو أكثر</span>
+      </div>
+      <div class="field">
+        <label for="confirm">تأكيد كلمة المرور</label>
+        <input id="confirm" name="confirm" type="password" class="ltr" autocomplete="new-password" minlength="8" required>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">إنشاء الحساب</button>
+    </form>
+  </div>
+  <p class="muted small" style="text-align:center;margin-top:1rem">عندك حساب؟ <a href="{{ url_for('auth.login') }}">سجّل دخول</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}رموز الاشتراك{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>رموز الاشتراك</h1><p class="muted">كل رمز يشتغل مرة وحدة لطالب واحد، والمدة تبدي من لحظة إدخاله.</p></div></div>
+{% include "admin/_nav.html" %}
+
+<div class="two-col">
+  <section class="stack">
+    {% if fresh %}
+    <div class="card">
+      <div class="row between">
+        <h2 style="margin:0">الرموز الجديدة</h2>
+        <button class="btn btn-sm" type="button" data-copy="{% for c in fresh %}{{ c.code|code }}{{ '\n' if not loop.last }}{% endfor %}">نسخ الكل</button>
+      </div>
+      <p class="muted small">اضغط على أي رمز حتى تنسخه وترسله للطالب.</p>
+      <div class="fresh-codes">
+        {% for c in fresh %}<button class="code ltr" type="button" data-copy="{{ c.code|code }}">{{ c.code|code }}</button>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <nav class="tabs">
+      {% for key, label in [('unused', 'غير مستخدمة'), ('used', 'مستخدمة'), ('revoked', 'ملغية'), ('all', 'الكل')] %}
+      <a href="{{ url_for('admin.codes', status=key) }}" class="{{ 'active' if status == key }}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+
+    {% if items %}
+    <div class="table-wrap">
+      <table>
+        <tr><th>الرمز</th><th>المدة</th><th>ملاحظة</th><th>الحالة</th><th></th></tr>
+        {% for c in items %}
+        <tr>
+          <td><code class="c ltr">{{ c.code|code }}</code></td>
+          <td>{{ c.days }} يوم</td>
+          <td class="small">{{ c.note or '—' }}</td>
+          <td class="small">
+            {% if c.status == 'used' %}<span class="badge ok">{{ c.used_by.name }}</span><div class="muted">{{ c.used_at|local }}</div>
+            {% elif c.status == 'revoked' %}<span class="badge danger">ملغي</span>
+            {% else %}<span class="badge">جاهز</span>{% endif %}
+          </td>
+          <td>
+            {% if c.status == 'unused' %}
+            <div class="btn-group">
+              <button class="btn btn-sm" type="button" data-copy="{{ c.code|code }}">نسخ</button>
+              <form class="inline" method="post" action="{{ url_for('admin.code_revoke', code_id=c.id, status=status) }}" data-confirm="تلغي هذا الرمز؟">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-danger" type="submit">إلغاء</button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">ماكو رموز بهذا القسم.</div>
+    {% endif %}
+  </section>
+
+  <aside>
+    <div class="card">
+      <h2>توليد رموز</h2>
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="days">مدة الاشتراك (أيام)</label>
+          <input id="days" name="days" type="number" min="1" max="730" value="30" required>
+          <div class="btn-group" style="margin-top:.35rem">
+            {% for d, l in [(7, 'أسبوع'), (30, 'شهر'), (120, 'فصل'), (270, 'سنة دراسية')] %}
+            <button class="btn btn-sm btn-ghost" type="button" data-days="{{ d }}">{{ l }}</button>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="field"><label for="count">عدد الرموز</label><input id="count" name="count" type="number" min="1" max="100" value="1" required></div>
+        <div class="field"><label for="note">ملاحظة (اختياري)</label><input id="note" name="note" type="text" maxlength="200" placeholder="مثلاً: اسم الطالب أو المجموعة"></div>
+        <button class="btn btn-primary btn-block" type="submit">توليد</button>
+      </form>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/codes.js') }}"></script>
+{% endblock %}

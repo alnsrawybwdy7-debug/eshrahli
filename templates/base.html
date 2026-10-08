@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+{% from "_macros.html" import logo, tg_icon %}
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f6b5c">
+  <meta name="apple-mobile-web-app-title" content="{{ site_name }}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}{% endblock %} · {{ site_name }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+{% set ep = request.endpoint or '' %}
+{% set has_tabs = g.user is not none %}
+<body class="{{ 'has-tabbar' if has_tabs }}">
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('student.home') }}"><span class="brand-mark">{{ logo() }}</span>{{ site_name }}</a>
+    {% if g.user %}
+    <nav class="nav" aria-label="القائمة">
+      {% if g.user.has_active_sub %}
+        <a href="{{ url_for('student.home') }}" class="{{ 'active' if ep in ('student.home','student.subject','student.watch') }}">المواد</a>
+        <a href="{{ url_for('live.room') }}" class="{{ 'active' if ep == 'live.room' }}">البث المباشر</a>
+      {% endif %}
+      {% if not g.user.is_admin %}
+        <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">الاشتراك</a>
+      {% endif %}
+      {% if g.user.is_admin %}
+        <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">لوحة التحكم</a>
+      {% endif %}
+      <a href="{{ url_for('auth.account') }}" class="{{ 'active' if ep == 'auth.account' }}">حسابي</a>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="linklike" type="submit">خروج</button>
+      </form>
+    </nav>
+    {% elif telegram_url %}
+    <a class="tg-link" href="{{ telegram_url }}" target="_blank" rel="noopener">{{ tg_icon() }}<span>تواصل</span></a>
+    {% endif %}
+  </div>
+</header>
+
+{% if g.user and g.user.has_active_sub and ep != 'live.room' %}
+<div class="live-banner" id="live-banner" data-poll="{{ url_for('student.live_status') }}" {% if not live_now %}hidden{% endif %}>
+  <div class="inner">
+    <span class="pulse" aria-hidden="true"></span>
+    <strong>بث مباشر الآن:</strong>
+    <span id="live-banner-title">{{ live_now.title if live_now else '' }}</span>
+    <span class="spacer"></span>
+    <a class="btn" href="{{ url_for('live.room') }}">انضمام للاتصال</a>
+  </div>
+</div>
+{% endif %}
+
+<main class="container">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+    <div class="flashes">
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="footer">
+  <span>{{ site_name }}</span>
+  {% if telegram_url %}<span class="sep">·</span><a href="{{ telegram_url }}" target="_blank" rel="noopener">للتواصل: <span class="ltr">@{{ telegram_user }}</span></a>{% endif %}
+</footer>
+
+{% if has_tabs %}
+{# Bottom tab bar for phones (hidden on tablet/desktop) #}
+<nav class="tabbar" aria-label="القائمة السفلية">
+  {% if g.user.has_active_sub %}
+  <a href="{{ url_for('student.home') }}" class="{{ 'active' if ep in ('student.home','student.subject','student.watch') }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M8 7h7"/></svg><span>المواد</span></a>
+  <a href="{{ url_for('live.room') }}" class="{{ 'active' if ep == 'live.room' }} {{ 'is-live' if live_now }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M8 8a5.6 5.6 0 0 0 0 8M16 8a5.6 5.6 0 0 1 0 8M5 5a9.9 9.9 0 0 0 0 14M19 5a9.9 9.9 0 0 1 0 14"/></svg><span>البث</span></a>
+  {% endif %}
+  {% if g.user.is_admin %}
+  <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>التحكم</span></a>
+  {% else %}
+  <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3"/><circle cx="12" cy="6" r="3"/><path d="M12 9v4"/></svg><span>الاشتراك</span></a>
+  {% endif %}
+  <a href="{{ url_for('auth.account') }}" class="{{ 'active' if ep == 'auth.account' }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>حسابي</span></a>
+</nav>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
