@@ -13,7 +13,10 @@ _DUMMY_HASH = generate_password_hash("timing-equalizer")
 
 
 def start_session(user):
+    tok = session.get("_csrf")
     session.clear()
+    if tok:
+        session["_csrf"] = tok  # other open tabs keep working after login
     if not user.is_admin and current_app.config["SINGLE_DEVICE"]:
         user.session_version += 1  # logs out any other device
     user.last_login_at = utcnow()

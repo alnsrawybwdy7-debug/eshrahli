@@ -21,7 +21,15 @@ def create_app():
     if app.config["TRUST_PROXY"]:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     if app.config["SECRET_KEY_IS_RANDOM"]:
-        app.logger.warning("SECRET_KEY غير مضبوط: الجلسات راح تنمسح كل ما يرجع يشتغل السيرفر.")
+        # No SECRET_KEY in .env: keep a generated one on disk so logins survive reloads/workers
+        key_file = os.path.join(app.instance_path, "secret_key")
+        try:
+            with open(key_file) as f:
+                app.config["SECRET_KEY"] = f.read().strip() or app.config["SECRET_KEY"]
+        except FileNotFoundError:
+            with open(key_file, "w") as f:
+                f.write(app.config["SECRET_KEY"])
+        app.logger.warning("SECRET_KEY غير مضبوط بملف .env، استخدمنا مفتاح محفوظ بـ instance/secret_key")
 
     db.init_app(app)
 
@@ -50,10 +58,13 @@ def create_app():
         if uid:
             user = db.session.get(User, uid)
             if user is None or user.is_blocked or session.get("ver") != user.session_version:
+                tok = session.get("_csrf")
                 session.clear()
+                if tok:
+                    session["_csrf"] = tok  # keep open forms (e.g. the login page) valid
             else:
                 g.user = user
-        check_csrf()
+        return check_csrf()
 
     @app.after_request
     def security_headers(resp):
@@ -73,7 +84,8 @@ def create_app():
             "worker-src 'self' blob:; "
             "frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
         )
-        if g.get("user") and request.endpoint not in ("static",):
+        if request.endpoint != "static":
+            # Pages contain per-user data and form tokens: never let the browser reuse an old copy
             resp.headers.setdefault("Cache-Control", "no-store")
         return resp
 

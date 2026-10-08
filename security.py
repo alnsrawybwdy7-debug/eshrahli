@@ -20,12 +20,23 @@ def csrf_token():
 
 
 def check_csrf():
+    """Returns None if OK, otherwise a response to send instead of running the view."""
     if request.method not in UNSAFE_METHODS:
-        return
+        return None
     sent = request.headers.get("X-CSRF-Token") or request.form.get("_csrf", "")
     expected = session.get("_csrf", "")
-    if not sent or not expected or not hmac.compare_digest(sent, expected):
-        abort(400, description="انتهت صلاحية الصفحة، حدّث الصفحة وجرّب مرة ثانية.")
+    if sent and expected and hmac.compare_digest(sent, expected):
+        return None
+    msg = "انتهت صلاحية الصفحة. جرّب مرة ثانية."
+    # Background requests (fetch/XHR) get a JSON error; normal forms go back to the page
+    if request.headers.get("X-CSRF-Token") is not None or request.is_json or request.method != "POST":
+        abort(400, description=msg)
+    csrf_token()  # make sure the fresh page gets a valid token
+    flash(msg, "warn")
+    target = request.full_path.rstrip("?") if request.endpoint not in (None, "auth.logout") else url_for("auth.login")
+    if not target.startswith("/") or target.startswith("//"):
+        target = "/"
+    return redirect(target, code=303)
 
 
 # ---------- Rate limiting (in-memory, per process) ----------
