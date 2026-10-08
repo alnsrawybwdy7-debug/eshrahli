@@ -91,6 +91,12 @@ def register():
     return render_template("auth/register.html", form=form)
 
 
+@bp.route("/features")
+def features():
+    """Public page: what the platform offers (linked from the login page)."""
+    return render_template("features.html", teacher=current_app.config["ADMIN_NAME"])
+
+
 @bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()

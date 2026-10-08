@@ -34,6 +34,15 @@ def create_app():
 
     tz = ZoneInfo(app.config["TIMEZONE"])
 
+    @app.url_defaults
+    def static_cache_bust(endpoint, values):
+        # /static/css/style.css?v=<mtime>: a new deploy gets a new URL, so caches never serve stale files
+        if endpoint == "static" and "filename" in values and "v" not in values:
+            try:
+                values["v"] = int(os.stat(os.path.join(app.static_folder, values["filename"])).st_mtime)
+            except OSError:
+                pass
+
     @app.before_request
     def load_user():
         g.user = None

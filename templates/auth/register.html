@@ -8,6 +8,7 @@
     <h1>حساب جديد</h1>
     <p class="muted">بعد التسجيل تفعّل اشتراكك برمز من المطور</p>
   </div>
+  <p class="small" style="text-align:center;margin:-.5rem 0 1rem"><a href="{{ url_for('auth.features') }}">ماذا نقدم لكم بالمنصة؟</a></p>
   <div class="card">
     <form method="post">
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">

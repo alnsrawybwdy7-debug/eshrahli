@@ -68,6 +68,7 @@
 </main>
 <footer class="footer">
   <span>{{ site_name }}</span>
+  <span class="sep">·</span><a href="{{ url_for('auth.features') }}">ماذا نقدم لكم</a>
   {% if telegram_url %}<span class="sep">·</span><a href="{{ telegram_url }}" target="_blank" rel="noopener">للتواصل: <span class="ltr">@{{ telegram_user }}</span></a>{% endif %}
 </footer>
 
