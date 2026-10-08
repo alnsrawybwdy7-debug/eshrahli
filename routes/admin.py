@@ -182,6 +182,8 @@ def content_create(sid):
     size = storage.stored_size(key)
     if size is None:
         return jsonify(error="الملف ما وصل للتخزين. جرّب ترفعه مرة ثانية."), 400
+    if size == storage.UNVERIFIED:
+        size = max(0, min(request.form.get("size", type=int) or 0, storage.MAX_SIZE[kind]))
     if Content.query.filter_by(storage_key=key).first():
         return jsonify(error="الملف مضاف من قبل."), 400
     title = request.form.get("title", "").strip()[:200] or os.path.splitext(filename)[0][:200]

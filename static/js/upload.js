@@ -89,6 +89,7 @@
       body.set("kind", box.dataset.kind);
       body.set("key", target.key);
       body.set("filename", f.name);
+      body.set("size", String(f.size));
       body.set("title", titleIn.value.trim());
       body.set("description", descIn.value.trim());
       body.set("is_visible", visIn.checked ? "1" : "0");

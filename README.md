@@ -61,6 +61,35 @@ python app.py
 flask --app app create-admin abdullah NEW_PASSWORD
 ```
 
+## النشر على PythonAnywhere (مجاني، بدون بطاقة)
+1. حساب جديد على https://eu.pythonanywhere.com (السيرفرات الأوروبية أقرب للعراق). اسم المستخدم يصير رابطك: `USERNAME.eu.pythonanywhere.com`
+2. من **Consoles ← Bash**:
+```bash
+git clone https://github.com/alnsrawybwdy7-debug/eshrahli.git
+cd eshrahli
+mkvirtualenv eshrahli --python=python3.11
+pip install -r requirements.txt
+nano .env     # الصق الإعدادات (DATABASE_URL فارغ + VERIFY_UPLOADS=0) ثم Ctrl+O و Enter و Ctrl+X
+```
+3. من **Web ← Add a new web app ← Manual configuration ← Python 3.11**:
+   - **Source code**: `/home/USERNAME/eshrahli`
+   - **Virtualenv**: `/home/USERNAME/.virtualenvs/eshrahli`
+   - **WSGI configuration file**: امسح محتواه وحط:
+     ```python
+     import sys
+     path = "/home/USERNAME/eshrahli"
+     if path not in sys.path:
+         sys.path.insert(0, path)
+     from app import app as application
+     ```
+   - **Static files**: URL `/static/` ← Directory `/home/USERNAME/eshrahli/static`
+   - فعّل **Force HTTPS** ثم اضغط **Reload**.
+4. ضيف `https://USERNAME.eu.pythonanywhere.com` لـ CORS بكت R2.
+
+ملاحظات النسخة المجانية: قاعدة البيانات SQLite (تنحفظ عادي)، السيرفر ما يكدر يتصل بـ R2 فـ `VERIFY_UPLOADS=0`، ولازم تضغط **Run until 3 months from today** بصفحة Web كل 3 شهور.
+
+**التحديث بعدين:** `cd ~/eshrahli && git pull` بالـ Bash، ثم **Reload** من صفحة Web.
+
 ## الحماية المطبقة
 - كلمات المرور مشفرة (Werkzeug scrypt)، وحماية CSRF على كل الطلبات.
 - Rate limiting على تسجيل الدخول، إنشاء الحسابات، وإدخال الرموز (ضد التخمين).

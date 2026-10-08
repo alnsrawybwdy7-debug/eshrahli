@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 
 def _flag(name, default="0"):
@@ -59,6 +59,9 @@ class Config:
     R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
     R2_BUCKET = os.getenv("R2_BUCKET", "")
     MEDIA_URL_TTL = int(os.getenv("MEDIA_URL_TTL", "10800"))  # seconds
+    # Check with R2 that an upload really arrived. Set 0 on hosts that block outbound
+    # traffic (PythonAnywhere free plan); it also falls back automatically if R2 is unreachable.
+    VERIFY_UPLOADS = _flag("VERIFY_UPLOADS", "1")
 
     # LiveKit (live calls)
     LIVEKIT_URL = os.getenv("LIVEKIT_URL", "")  # wss://xxxx.livekit.cloud

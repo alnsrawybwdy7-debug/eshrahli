@@ -101,14 +101,24 @@ def upload_target(key, content_type, csrf):
     }
 
 
+UNVERIFIED = -1  # the server couldn't reach the bucket to check (e.g. PythonAnywhere free plan)
+
+
 def stored_size(key):
-    """Size of the stored object, or None if it doesn't exist."""
+    """Size of the stored object, None if it doesn't exist, or UNVERIFIED if R2 is unreachable."""
     if r2_enabled():
+        if not current_app.config["VERIFY_UPLOADS"]:
+            return UNVERIFIED
         try:
             head = r2().head_object(Bucket=current_app.config["R2_BUCKET"], Key=key)
             return int(head.get("ContentLength", 0))
-        except Exception:
-            return None
+        except Exception as e:
+            code = str(getattr(e, "response", {}).get("Error", {}).get("Code", ""))
+            if code in ("404", "NoSuchKey", "NotFound"):
+                return None
+            # Network blocked / proxy refused: trust the browser's report instead of failing
+            current_app.logger.warning("R2 HEAD check skipped (%s)", type(e).__name__)
+            return UNVERIFIED
     try:
         return os.path.getsize(local_path(key))
     except (OSError, ValueError):
