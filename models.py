@@ -15,6 +15,21 @@ def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def days_until(dt):
+    if not dt:
+        return 0
+    secs = (dt - utcnow()).total_seconds()
+    return max(0, int(-(-secs // 86400)))  # ceil
+
+
+# A code linked to no subjects = "all subjects". Linked to some = only those subjects.
+code_subjects = db.Table(
+    "sub_code_subjects",
+    db.Column("code_id", db.Integer, db.ForeignKey("sub_codes.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("subject_id", db.Integer, db.ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
 class User(db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
@@ -34,26 +49,69 @@ class User(db.Model):
     def check_password(self, pw):
         return check_password_hash(self.password_hash, pw)
 
+    # sub_expires_at = the "all subjects" subscription. Per-subject ones live in SubjectSub.
+    subject_subs = db.relationship("SubjectSub", backref="user", cascade="all, delete-orphan", lazy="selectin")
+
+    @property
+    def all_access(self):
+        return self.is_admin or bool(self.sub_expires_at and self.sub_expires_at > utcnow())
+
+    @property
+    def active_subject_ids(self):
+        now = utcnow()
+        return {s.subject_id for s in self.subject_subs if s.expires_at and s.expires_at > now}
+
+    def can_access(self, subject_id):
+        return self.all_access or (subject_id is not None and subject_id in self.active_subject_ids)
+
     @property
     def has_active_sub(self):
-        if self.is_admin:
-            return True
-        return bool(self.sub_expires_at and self.sub_expires_at > utcnow())
+        """Has at least one active subscription (all subjects or any single subject)."""
+        return self.all_access or bool(self.active_subject_ids)
+
+    @property
+    def ever_subscribed(self):
+        return bool(self.sub_expires_at or self.subject_subs)
 
     @property
     def sub_status(self):
         if self.is_admin:
             return "admin"
-        if not self.sub_expires_at:
-            return "none"
-        return "active" if self.sub_expires_at > utcnow() else "expired"
+        if self.has_active_sub:
+            return "active"
+        return "expired" if self.ever_subscribed else "none"
+
+    @property
+    def subscriptions(self):
+        """All subscriptions for display, active first: [{label, expires, active, days, all}]"""
+        now = utcnow()
+        out = []
+        if self.sub_expires_at:
+            out.append({"label": "كل المواد", "expires": self.sub_expires_at, "all": True,
+                        "active": self.sub_expires_at > now, "days": days_until(self.sub_expires_at)})
+        for s in self.subject_subs:
+            out.append({"label": s.subject.name if s.subject else "مادة محذوفة", "expires": s.expires_at,
+                        "all": False, "active": s.expires_at > now, "days": days_until(s.expires_at),
+                        "subject_id": s.subject_id})
+        out.sort(key=lambda x: (not x["active"], not x["all"], x["expires"]))
+        return out
 
     @property
     def days_left(self):
-        if not self.sub_expires_at:
-            return 0
-        secs = (self.sub_expires_at - utcnow()).total_seconds()
-        return max(0, int(-(-secs // 86400)))  # ceil
+        """Days left on the longest active subscription."""
+        active = [x["days"] for x in self.subscriptions if x["active"]]
+        return max(active) if active else 0
+
+
+class SubjectSub(db.Model):
+    """Subscription to a single subject."""
+    __tablename__ = "subject_subs"
+    __table_args__ = (db.UniqueConstraint("user_id", "subject_id", name="uq_subject_sub"),)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
 
 class SubCode(db.Model):
@@ -68,6 +126,16 @@ class SubCode(db.Model):
     revoked = db.Column(db.Boolean, default=False, nullable=False)
 
     used_by = db.relationship("User", backref="codes")
+    subjects = db.relationship("Subject", secondary=code_subjects, backref="codes", lazy="selectin",
+                               order_by="Subject.position")
+
+    @property
+    def is_all(self):
+        return not self.subjects
+
+    @property
+    def scope_label(self):
+        return "كل المواد" if self.is_all else "، ".join(s.name for s in self.subjects)
 
     @property
     def status(self):
@@ -89,6 +157,7 @@ class Subject(db.Model):
         "Content", backref="subject", cascade="all, delete-orphan",
         order_by="(Content.position, Content.id)",
     )
+    subscriptions = db.relationship("SubjectSub", backref="subject", cascade="all, delete-orphan")
 
 
 class Content(db.Model):
@@ -122,3 +191,16 @@ class LiveSession(db.Model):
     def current():
         return (LiveSession.query.filter(LiveSession.ended_at.is_(None))
                 .order_by(LiveSession.started_at.desc()).first())
+
+    @staticmethod
+    def current_for(user):
+        """The running live session if this user may see it: a subject's live is only for that
+        subject's subscribers; a live with no subject is for every active subscriber."""
+        s = LiveSession.current()
+        if not s or not user:
+            return None
+        if user.is_admin:
+            return s
+        if s.subject_id is None:
+            return s if user.has_active_sub else None
+        return s if user.can_access(s.subject_id) else None

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import sub_badge %}
+{% from "_macros.html" import sub_badge, sub_list %}
 {% block title %}الطلاب{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>الطلاب</h1></div></div>
@@ -11,6 +11,10 @@
     {% for key, label in [('all', 'الكل'), ('active', 'فعّال'), ('expired', 'منتهي'), ('none', 'غير مشترك'), ('blocked', 'موقوف')] %}
     <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
+  </select>
+  <select name="subject" style="max-width:200px">
+    <option value="">كل المواد</option>
+    {% for sj in subjects %}<option value="{{ sj.id }}" {% if subject_id == sj.id %}selected{% endif %}>مشتركي: {{ sj.name }}</option>{% endfor %}
   </select>
   <button class="btn" type="submit">بحث</button>
   <span class="muted small">{{ items|length }} طالب</span>
@@ -24,8 +28,8 @@
     <div class="body">
       <span class="title">{{ u.name }} <span class="muted small ltr">@{{ u.username }}</span></span>
       <span class="sub">
-        {{ sub_badge(u) }}
-        {% if u.sub_expires_at %} ينتهي {{ u.sub_expires_at|local('%Y/%m/%d') }}{% endif %}
+        {% if u.is_blocked %}<span class="badge danger">موقوف</span>{% endif %}
+        {% if u.subscriptions %}{{ sub_list(u) }}{% else %}<span class="badge">غير مشترك</span>{% endif %}
         · آخر دخول {{ u.last_login_at|local('%m/%d %I:%M %p') }}
       </span>
     </div>
@@ -36,13 +40,17 @@
           <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="add_days">
           <input type="hidden" name="back" value="{{ request.full_path }}">
+          <select name="target" style="width:auto;max-width:180px">
+            <option value="all">كل المواد</option>
+            {% for sj in subjects %}<option value="{{ sj.id }}">{{ sj.name }}</option>{% endfor %}
+          </select>
           <input type="number" name="days" value="30" min="-730" max="730" style="width:90px">
           <button class="btn btn-sm btn-primary" type="submit">إضافة أيام</button>
         </form>
         <form class="btn-group" method="post" action="{{ url_for('admin.user_action', uid=u.id) }}">
           <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <input type="hidden" name="back" value="{{ request.full_path }}">
-          {% if u.sub_status == 'active' %}<button class="btn btn-sm" name="action" value="end_sub">إنهاء الاشتراك</button>{% endif %}
+          {% if u.sub_status == 'active' %}<button class="btn btn-sm" name="action" value="end_sub">إنهاء كل اشتراكاته</button>{% endif %}
           <button class="btn btn-sm" name="action" value="logout_all">خروج من كل الأجهزة</button>
           <button class="btn btn-sm" name="action" value="reset_pw">كلمة مرور مؤقتة</button>
           {% if u.is_blocked %}

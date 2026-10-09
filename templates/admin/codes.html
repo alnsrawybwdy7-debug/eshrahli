@@ -12,7 +12,7 @@
         <h2 style="margin:0">الرموز الجديدة</h2>
         <button class="btn btn-sm" type="button" data-copy="{% for c in fresh %}{{ c.code|code }}{{ '\n' if not loop.last }}{% endfor %}">نسخ الكل</button>
       </div>
-      <p class="muted small">اضغط على أي رمز حتى تنسخه وترسله للطالب.</p>
+      <p class="muted small">الاشتراك: <b>{{ fresh[0].scope_label }}</b> · {{ fresh[0].days }} يوم. اضغط على أي رمز حتى تنسخه وترسله للطالب.</p>
       <div class="fresh-codes">
         {% for c in fresh %}<button class="code ltr" type="button" data-copy="{{ c.code|code }}">{{ c.code|code }}</button>{% endfor %}
       </div>
@@ -28,10 +28,11 @@
     {% if items %}
     <div class="table-wrap">
       <table>
-        <tr><th>الرمز</th><th>المدة</th><th>ملاحظة</th><th>الحالة</th><th></th></tr>
+        <tr><th>الرمز</th><th>الاشتراك</th><th>المدة</th><th>ملاحظة</th><th>الحالة</th><th></th></tr>
         {% for c in items %}
         <tr>
           <td><code class="c ltr">{{ c.code|code }}</code></td>
+          <td class="small">{% if c.is_all %}<span class="badge ok">كل المواد</span>{% else %}{% for sj in c.subjects %}<span class="badge">{{ sj.name }}</span> {% endfor %}{% endif %}</td>
           <td>{{ c.days }} يوم</td>
           <td class="small">{{ c.note or '—' }}</td>
           <td class="small">
@@ -70,6 +71,18 @@
           <div class="btn-group" style="margin-top:.35rem">
             {% for d, l in [(7, 'أسبوع'), (30, 'شهر'), (120, 'فصل'), (270, 'سنة دراسية')] %}
             <button class="btn btn-sm btn-ghost" type="button" data-days="{{ d }}">{{ l }}</button>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="field">
+          <label>الاشتراك</label>
+          <label class="check"><input type="radio" name="scope" value="all" checked> كل المواد <span class="muted small">({{ price_all|money }} {{ currency }})</span></label>
+          <label class="check"><input type="radio" name="scope" value="subjects" id="scope-subjects"> مواد محددة <span class="muted small">({{ price_subject|money }} {{ currency }} للمادة)</span></label>
+          <div class="scope-picker" id="scope-picker" hidden>
+            {% for sj in subjects %}
+            <label class="check"><input type="checkbox" name="subject_ids" value="{{ sj.id }}"> {{ sj.name }}</label>
+            {% else %}
+            <span class="muted small">ماكو مواد. ضيف مادة أول.</span>
             {% endfor %}
           </div>
         </div>

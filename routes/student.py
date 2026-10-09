@@ -4,9 +4,10 @@ from datetime import timedelta
 from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request,
                    send_file, url_for)
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 import storage
-from models import KINDS, Content, LiveSession, SubCode, Subject, db, utcnow
+from models import KINDS, Content, LiveSession, SubCode, Subject, SubjectSub, db, utcnow
 from security import client_ip, limiter, login_required, subscription_required
 
 bp = Blueprint("student", __name__)
@@ -28,10 +29,17 @@ def kind_counts(subject_ids=None, include_hidden=False):
     return out
 
 
+def no_access(subject):
+    flash(f"مادة «{subject.name}» مو ضمن اشتراكك. اشترك بيها أو بكل المواد حتى تفتحها.", "warn")
+    return redirect(url_for("student.subscribe", subject=subject.id))
+
+
 def get_visible_content(cid):
     c = db.session.get(Content, cid) or abort(404)
     if not g.user.is_admin and (not c.is_visible or not c.subject.is_visible):
         abort(404)
+    if not g.user.can_access(c.subject_id):
+        abort(no_access(c.subject))
     return c
 
 
@@ -44,6 +52,7 @@ def home():
     if not g.user.is_admin:
         q = q.filter_by(is_visible=True)
     subjects = q.order_by(Subject.position, Subject.id).all()
+    subjects.sort(key=lambda s: not g.user.can_access(s.id))  # subscribed subjects first
     counts = kind_counts([s.id for s in subjects], include_hidden=g.user.is_admin)
     return render_template("student/home.html", subjects=subjects, counts=counts)
 
@@ -68,14 +77,33 @@ def subscribe():
             db.session.rollback()
             flash("الرمز غير صحيح أو مستخدم من قبل.", "error")
             return redirect(url_for("student.subscribe"))
-        base = g.user.sub_expires_at if g.user.sub_expires_at and g.user.sub_expires_at > now else now
-        g.user.sub_expires_at = base + timedelta(days=code.days)
-        db.session.commit()
-        flash(f"تم تفعيل اشتراكك لمدة {code.days} يوم. بالتوفيق!", "ok")
+        delta = timedelta(days=code.days)
+        if code.is_all:
+            base = g.user.sub_expires_at if g.user.sub_expires_at and g.user.sub_expires_at > now else now
+            g.user.sub_expires_at = base + delta
+        else:
+            existing = {ss.subject_id: ss for ss in g.user.subject_subs}
+            for subj in code.subjects:
+                ss = existing.get(subj.id)
+                if ss:
+                    ss.expires_at = max(ss.expires_at, now) + delta  # extend what's left
+                else:
+                    db.session.add(SubjectSub(user_id=g.user.id, subject_id=subj.id, expires_at=now + delta))
+        label = code.scope_label
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("صار خطأ أثناء التفعيل، جرّب مرة ثانية.", "error")
+            return redirect(url_for("student.subscribe"))
+        flash(f"تم تفعيل اشتراكك ({label}) لمدة {code.days} يوم. بالتوفيق!", "ok")
         return redirect(url_for("student.home"))
     c = current_app.config
+    subjects = Subject.query.filter_by(is_visible=True).order_by(Subject.position, Subject.id).all()
+    want = db.session.get(Subject, request.args.get("subject", type=int) or 0)
     return render_template("student/subscribe.html", whatsapp=c["CONTACT_WHATSAPP"],
-                           telegram=c["CONTACT_TELEGRAM"], developer=c["DEVELOPER_NAME"])
+                           telegram=c["CONTACT_TELEGRAM"], developer=c["DEVELOPER_NAME"],
+                           subjects=subjects, want=want)
 
 
 @bp.route("/subject/<int:sid>")
@@ -84,6 +112,8 @@ def subject(sid):
     s = db.session.get(Subject, sid) or abort(404)
     if not s.is_visible and not g.user.is_admin:
         abort(404)
+    if not g.user.can_access(s.id):
+        return no_access(s)
     tab = request.args.get("tab", "video")
     if tab not in KINDS:
         tab = "video"
@@ -133,9 +163,7 @@ def media(key):
 
 @bp.route("/api/live-status")
 def live_status():
-    if not g.user or not g.user.has_active_sub:
-        return jsonify(live=False)
-    s = LiveSession.current()
+    s = LiveSession.current_for(g.user)
     if not s:
         return jsonify(live=False)
     return jsonify(live=True, id=s.id, title=s.title, url=url_for("live.room"))

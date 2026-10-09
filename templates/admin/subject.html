@@ -11,7 +11,7 @@
 </div>
 
 <nav class="tabs">
-  {% for k in ('video', 'summary', 'homework') %}
+  {% for k in KINDS %}
   <a href="{{ url_for('admin.subject', sid=s.id, tab=k) }}" class="{{ 'active' if tab == k }}">{{ KIND_LABELS[k] }}<span class="count">{{ counts.get(k, 0) }}</span></a>
   {% endfor %}
 </nav>

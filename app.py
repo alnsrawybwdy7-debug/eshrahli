@@ -9,7 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import livekit_util
 import storage
 from config import Config
-from models import KIND_LABELS, KIND_SINGULAR, LiveSession, User, db
+from models import KIND_LABELS, KIND_SINGULAR, KINDS, LiveSession, User, db
 from security import check_csrf, csrf_token
 
 
@@ -91,9 +91,7 @@ def create_app():
 
     @app.context_processor
     def inject():
-        live = None
-        if g.get("user") and g.user.has_active_sub:
-            live = LiveSession.current()
+        live = LiveSession.current_for(g.get("user"))
         c = app.config
         tg = c["CONTACT_TELEGRAM"]
         return {
@@ -102,9 +100,14 @@ def create_app():
             "site_tagline": c["SITE_TAGLINE"],
             "teacher_label": c["TEACHER_LABEL"],
             "telegram_user": tg,
+            "price_subject": c["PRICE_SUBJECT"],
+            "price_all": c["PRICE_ALL"],
+            "currency": c["CURRENCY"],
+            "plan_includes": c["PLAN_INCLUDES"],
             "telegram_url": f"https://t.me/{tg}" if tg else "",
             "live_now": live,
             "KIND_LABELS": KIND_LABELS,
+            "KINDS": KINDS,
             "KIND_SINGULAR": KIND_SINGULAR,
             "r2_on": storage.r2_enabled(),
             "livekit_on": livekit_util.configured(),
@@ -124,6 +127,10 @@ def create_app():
             if n < 1024 or unit == "GB":
                 return f"{n:.0f} {unit}" if unit in ("B", "KB") else f"{n:.1f} {unit}"
             n /= 1024
+
+    @app.template_filter("money")
+    def money(n):
+        return f"{int(n):,}"
 
     @app.template_filter("code")
     def fmt_code(c):

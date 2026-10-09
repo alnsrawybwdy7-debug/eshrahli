@@ -42,12 +42,12 @@
           <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <div class="form-row">
             <div class="field"><label for="ltitle">العنوان</label><input id="ltitle" name="title" type="text" placeholder="مراجعة قبل الامتحان" required maxlength="200"></div>
-            <div class="field"><label for="lsubject">المادة (اختياري)</label>
-              <select id="lsubject" name="subject_id"><option value="">—</option>{% for s in subjects %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+            <div class="field"><label for="lsubject">لمشتركي مادة</label>
+              <select id="lsubject" name="subject_id"><option value="">كل المشتركين</option>{% for s in subjects %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
             </div>
           </div>
           <button class="btn btn-live" type="submit">بدء البث</button>
-          <span class="muted small">يطلع زر "انضمام" لكل المشتركين فوراً.</span>
+          <span class="muted small">زر "انضمام" يطلع فوراً لمشتركي المادة المختارة، ولمشتركي كل المواد.</span>
         </form>
       {% endif %}
     </div>
@@ -59,7 +59,7 @@
         <table>
           <tr><th>الطالب</th><th>المدة</th><th>الوقت</th></tr>
           {% for c in recent %}
-          <tr><td>{{ c.used_by.name }} <span class="muted small ltr">@{{ c.used_by.username }}</span></td><td>{{ c.days }} يوم</td><td class="small">{{ c.used_at|local }}</td></tr>
+          <tr><td>{{ c.used_by.name }} <span class="muted small ltr">@{{ c.used_by.username }}</span><div class="muted small">{{ c.scope_label }}</div></td><td>{{ c.days }} يوم</td><td class="small">{{ c.used_at|local }}</td></tr>
           {% endfor %}
         </table>
       </div>
@@ -80,8 +80,8 @@
       <h3>اشتراكات تنتهي خلال 3 أيام</h3>
       {% if expiring %}
       <div class="list">
-        {% for u in expiring %}
-        <div class="row between small"><span>{{ u.name }}</span><span class="badge warn">{{ u.sub_expires_at|local('%m/%d %I:%M %p') }}</span></div>
+        {% for e in expiring %}
+        <div class="row between small"><span>{{ e.user.name }} <span class="muted">· {{ e.label }}</span></span><span class="badge warn">{{ e.at|local('%m/%d %I:%M %p') }}</span></div>
         {% endfor %}
       </div>
       {% else %}<p class="muted small">ماكو.</p>{% endif %}

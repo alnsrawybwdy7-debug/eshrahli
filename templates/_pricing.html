@@ -1,0 +1,31 @@
+{# Pricing cards. Set `pricing_cta` before including: "register" | "subscribe" | "none" #}
+{% set cta = pricing_cta|default('none') %}
+<div class="plans">
+  <article class="plan">
+    <h3>اشتراك مادة واحدة</h3>
+    <p class="plan-sub">تختار المادة اللي تحتاجها</p>
+    <div class="plan-price"><b>{{ price_subject|money }}</b><span>{{ currency }}</span></div>
+    <p class="plan-per">للمادة الواحدة</p>
+    <ul class="plan-list">{% for x in plan_includes %}<li>{{ x }}</li>{% endfor %}</ul>
+    {% if cta == 'register' %}
+      <a class="btn btn-block" href="{{ url_for('auth.register') }}">سوّي حساب واشترك</a>
+    {% elif cta == 'subscribe' and telegram_url %}
+      {% set m = 'مرحبا، أريد اشتراك مادة واحدة' ~ (': ' ~ want.name if want else ' (اكتب اسم المادة)') ~ '. اسم المستخدم مالي: ' ~ g.user.username %}
+      <a class="btn btn-block" href="{{ telegram_url }}?text={{ m|urlencode }}" target="_blank" rel="noopener">اطلب اشتراك مادة{{ ': ' ~ want.name if want }}</a>
+    {% endif %}
+  </article>
+  <article class="plan featured">
+    <span class="plan-tag">الشامل</span>
+    <h3>اشتراك كل المواد</h3>
+    <p class="plan-sub">كل مواد القسم بحساب واحد</p>
+    <div class="plan-price"><b>{{ price_all|money }}</b><span>{{ currency }}</span></div>
+    <p class="plan-per">لكل المواد</p>
+    <ul class="plan-list">{% for x in plan_includes %}<li>{{ x }}</li>{% endfor %}</ul>
+    {% if cta == 'register' %}
+      <a class="btn btn-primary btn-block" href="{{ url_for('auth.register') }}">سوّي حساب واشترك</a>
+    {% elif cta == 'subscribe' and telegram_url %}
+      {% set m = 'مرحبا، أريد اشتراك كل المواد. اسم المستخدم مالي: ' ~ g.user.username %}
+      <a class="btn btn-primary btn-block" href="{{ telegram_url }}?text={{ m|urlencode }}" target="_blank" rel="noopener">اطلب اشتراك كل المواد</a>
+    {% endif %}
+  </article>
+</div>

@@ -9,8 +9,12 @@
       {% if not livekit_on %}<div class="notice">البث يحتاج إعدادات LiveKit بملف <span class="ltr">.env</span> (شوف README).</div>{% endif %}
       <form method="post" action="{{ url_for('live.start') }}">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-        <div class="field"><label for="title">عنوان البث</label><input id="title" name="title" type="text" placeholder="مثلاً: مراجعة الفصل الثالث" required maxlength="200"></div>
-        <button class="btn btn-live" type="submit">بدء البث وإظهاره للمشتركين</button>
+        <div class="field"><label for="title">عنوان البث</label><input id="title" name="title" type="text" placeholder="مثلاً: ميت قبل امتحان المد" required maxlength="200"></div>
+        <div class="field"><label for="subject_id">لمشتركي مادة</label>
+          <select id="subject_id" name="subject_id"><option value="">كل المشتركين</option>{% for sj in subjects %}<option value="{{ sj.id }}">{{ sj.name }}</option>{% endfor %}</select>
+          <span class="hint">البث يطلع بس لمشتركي هاي المادة ولمشتركي كل المواد.</span>
+        </div>
+        <button class="btn btn-live" type="submit">بدء البث</button>
       </form>
     </div>
   {% else %}

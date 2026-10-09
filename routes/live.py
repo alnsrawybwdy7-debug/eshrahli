@@ -12,14 +12,15 @@ bp = Blueprint("live", __name__, url_prefix="/live")
 @bp.route("/")
 @subscription_required
 def room():
-    s = LiveSession.current()
-    return render_template("live/room.html", s=s)
+    s = LiveSession.current_for(g.user)
+    subjects = Subject.query.order_by(Subject.position, Subject.id).all() if g.user.is_admin else []
+    return render_template("live/room.html", s=s, subjects=subjects)
 
 
 @bp.route("/token", methods=["POST"])
 @subscription_required
 def token():
-    s = LiveSession.current()
+    s = LiveSession.current_for(g.user)
     if not s:
         return jsonify(error="ماكو بث هسه."), 404
     if not livekit_util.configured():

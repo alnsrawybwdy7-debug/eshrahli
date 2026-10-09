@@ -44,6 +44,12 @@ class Config:
     DEVELOPER_NAME = os.getenv("DEVELOPER_NAME", "المطور")
     # Title shown next to the teacher's name in the live room, e.g. "فاطمة ثائر (المدرّسة)"
     TEACHER_LABEL = os.getenv("TEACHER_LABEL", "المدرّسة")
+    # Prices shown on the register / subscribe pages (whole dinars)
+    PRICE_SUBJECT = int(os.getenv("PRICE_SUBJECT", "30000"))
+    PRICE_ALL = int(os.getenv("PRICE_ALL", "150000"))
+    CURRENCY = os.getenv("CURRENCY", "دينار")
+    PLAN_INCLUDES = [x.strip() for x in os.getenv(
+        "PLAN_INCLUDES", "شروحات|ملخصات|تقارير|ميت قبل امتحان المد والفاينل").split("|") if x.strip()]
     CONTACT_WHATSAPP = os.getenv("CONTACT_WHATSAPP", "").strip()  # e.g. 9647800000000 (optional)
     CONTACT_TELEGRAM = os.getenv("CONTACT_TELEGRAM", "nomiya_0").strip().lstrip("@")  # username
     TIMEZONE = os.getenv("TIMEZONE", "Asia/Baghdad")

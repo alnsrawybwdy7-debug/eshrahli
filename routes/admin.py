@@ -3,10 +3,10 @@ import secrets
 from datetime import timedelta
 
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 
 import storage
-from models import KINDS, Content, LiveSession, SubCode, Subject, User, db, utcnow
+from models import KINDS, Content, LiveSession, SubCode, Subject, SubjectSub, User, db, utcnow
 from routes.student import kind_counts
 from security import admin_required, csrf_token
 
@@ -22,6 +22,13 @@ def new_code():
             return c
 
 
+def active_filter(now):
+    """SQL condition: student has at least one active subscription."""
+    # explicit IS NOT NULL so NOT(...) works (NULL > now would make the whole condition NULL)
+    return or_(and_(User.sub_expires_at.isnot(None), User.sub_expires_at > now),
+               User.subject_subs.any(SubjectSub.expires_at > now))
+
+
 def back(default):
     ref = request.form.get("back") or ""
     return redirect(ref if ref.startswith("/") and not ref.startswith("//") else default)
@@ -34,7 +41,7 @@ def dashboard():
     now = utcnow()
     stats = {
         "students": User.query.filter_by(is_admin=False).count(),
-        "active": User.query.filter(User.is_admin.is_(False), User.sub_expires_at > now).count(),
+        "active": User.query.filter(User.is_admin.is_(False), active_filter(now)).count(),
         "unused_codes": SubCode.query.filter_by(used_by_id=None, revoked=False).count(),
         "subjects": Subject.query.count(),
         "videos": Content.query.filter_by(kind="video").count(),
@@ -42,9 +49,13 @@ def dashboard():
     }
     recent = (SubCode.query.filter(SubCode.used_by_id.isnot(None))
               .order_by(SubCode.used_at.desc()).limit(8).all())
-    expiring = (User.query.filter(User.is_admin.is_(False), User.sub_expires_at > now,
-                                  User.sub_expires_at < now + timedelta(days=3))
-                .order_by(User.sub_expires_at).limit(8).all())
+    soon = now + timedelta(days=3)
+    expiring = [{"user": u, "label": "كل المواد", "at": u.sub_expires_at}
+                for u in User.query.filter(User.is_admin.is_(False), User.sub_expires_at > now,
+                                           User.sub_expires_at < soon).limit(20)]
+    expiring += [{"user": ss.user, "label": ss.subject.name, "at": ss.expires_at}
+                 for ss in SubjectSub.query.filter(SubjectSub.expires_at > now, SubjectSub.expires_at < soon).limit(20)]
+    expiring = sorted(expiring, key=lambda x: x["at"])[:8]
     subjects = Subject.query.order_by(Subject.position, Subject.id).all()
     return render_template("admin/dashboard.html", stats=stats, recent=recent, expiring=expiring,
                            subjects=subjects, live=LiveSession.current())
@@ -101,6 +112,12 @@ def subject_delete(sid):
         return redirect(url_for("admin.subject", sid=sid))
     keys = [c.storage_key for c in s.contents]
     LiveSession.query.filter_by(subject_id=sid).update({"subject_id": None})
+    for code in list(s.codes):
+        if len(code.subjects) == 1:
+            # without its only subject the code would look like an "all subjects" code
+            if not code.used_by_id:
+                code.revoked = True
+            code.note = ((code.note or "") + f" (كان لمادة {s.name} المحذوفة)").strip()[:200]
     db.session.delete(s)
     db.session.commit()
     for k in keys:
@@ -238,17 +255,26 @@ def codes():
     if request.method == "POST":
         count = max(1, min(100, request.form.get("count", type=int) or 1))
         days = request.form.get("days", type=int) or 0
+        scope = request.form.get("scope", "all")
+        picked = []
+        if scope == "subjects":
+            ids = set(request.form.getlist("subject_ids", type=int))
+            picked = Subject.query.filter(Subject.id.in_(ids)).order_by(Subject.position).all() if ids else []
         if not (1 <= days <= 730):
             flash("المدة لازم تكون بين 1 و 730 يوم.", "error")
+        elif scope == "subjects" and not picked:
+            flash("اختار مادة وحدة على الأقل، أو اختار «كل المواد».", "error")
         else:
             note = request.form.get("note", "").strip()[:200]
             for _ in range(count):
                 code = SubCode(code=new_code(), days=days, note=note)
+                code.subjects = list(picked)
                 db.session.add(code)
                 db.session.flush()
                 fresh.append(code)
             db.session.commit()
-            flash(f"تم توليد {count} رمز بمدة {days} يوم.", "ok")
+            scope_txt = "كل المواد" if not picked else "، ".join(p.name for p in picked)
+            flash(f"تم توليد {count} رمز ({scope_txt}) بمدة {days} يوم.", "ok")
     status = request.args.get("status", "unused")
     q = SubCode.query
     if status == "unused":
@@ -258,7 +284,8 @@ def codes():
     elif status == "revoked":
         q = q.filter_by(revoked=True)
     items = q.order_by(SubCode.created_at.desc(), SubCode.id.desc()).limit(500).all()
-    return render_template("admin/codes.html", items=items, status=status, fresh=fresh)
+    subjects = Subject.query.order_by(Subject.position, Subject.id).all()
+    return render_template("admin/codes.html", items=items, status=status, fresh=fresh, subjects=subjects)
 
 
 @bp.route("/codes/<int:code_id>/revoke", methods=["POST"])
@@ -285,16 +312,22 @@ def users():
     if qtext:
         like = f"%{qtext}%"
         q = q.filter(or_(User.name.ilike(like), User.username.ilike(like)))
+    subject_id = request.args.get("subject", type=int)
     if status == "active":
-        q = q.filter(User.sub_expires_at > now)
+        q = q.filter(active_filter(now))
     elif status == "expired":
-        q = q.filter(User.sub_expires_at <= now)
+        q = q.filter(and_(or_(User.sub_expires_at.isnot(None), User.subject_subs.any()), ~active_filter(now)))
     elif status == "none":
-        q = q.filter(User.sub_expires_at.is_(None))
+        q = q.filter(User.sub_expires_at.is_(None), ~User.subject_subs.any())
     elif status == "blocked":
         q = q.filter_by(is_blocked=True)
+    if subject_id:  # students who can open this subject (its own subscribers + all-subjects)
+        q = q.filter(or_(User.sub_expires_at > now,
+                         User.subject_subs.any(and_(SubjectSub.subject_id == subject_id, SubjectSub.expires_at > now))))
     items = q.order_by(User.created_at.desc()).limit(500).all()
-    return render_template("admin/users.html", items=items, q=qtext, status=status)
+    subjects = Subject.query.order_by(Subject.position, Subject.id).all()
+    return render_template("admin/users.html", items=items, q=qtext, status=status,
+                           subjects=subjects, subject_id=subject_id)
 
 
 @bp.route("/users/<int:uid>/action", methods=["POST"])
@@ -307,15 +340,30 @@ def user_action(uid):
     now = utcnow()
     if action == "add_days":
         days = request.form.get("days", type=int) or 0
+        target = request.form.get("target", "all")
+        subj = None if target == "all" else db.session.get(Subject, int(target) if target.isdigit() else 0)
         if not (-730 <= days <= 730) or days == 0:
             flash("عدد أيام غير صالح.", "error")
-        else:
+        elif target != "all" and not subj:
+            flash("المادة غير موجودة.", "error")
+        elif subj is None:
             base = u.sub_expires_at if u.sub_expires_at and u.sub_expires_at > now else now
             u.sub_expires_at = base + timedelta(days=days)
-            flash(f"تم تعديل اشتراك {u.name}.", "ok")
+            flash(f"تم تعديل اشتراك {u.name} (كل المواد).", "ok")
+        else:
+            ss = SubjectSub.query.filter_by(user_id=u.id, subject_id=subj.id).first()
+            if ss:
+                ss.expires_at = max(ss.expires_at, now) + timedelta(days=days)
+            elif days > 0:
+                db.session.add(SubjectSub(user_id=u.id, subject_id=subj.id, expires_at=now + timedelta(days=days)))
+            flash(f"تم تعديل اشتراك {u.name} بمادة {subj.name}.", "ok")
     elif action == "end_sub":
-        u.sub_expires_at = now
-        flash(f"تم إنهاء اشتراك {u.name}.", "ok")
+        if u.sub_expires_at and u.sub_expires_at > now:
+            u.sub_expires_at = now
+        for ss in u.subject_subs:
+            if ss.expires_at > now:
+                ss.expires_at = now
+        flash(f"تم إنهاء كل اشتراكات {u.name}.", "ok")
     elif action == "block":
         u.is_blocked = True
         u.session_version += 1

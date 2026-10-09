@@ -10,9 +10,9 @@
       <tr><th>الاسم</th><td>{{ g.user.name }}</td></tr>
       <tr><th>اسم المستخدم</th><td class="ltr">{{ g.user.username }}</td></tr>
       <tr><th>الاشتراك</th><td>{{ sub_badge(g.user) }}</td></tr>
-      {% if g.user.sub_expires_at and not g.user.is_admin %}
-      <tr><th>ينتهي بتاريخ</th><td>{{ g.user.sub_expires_at|local }}</td></tr>
-      {% endif %}
+      {% for x in g.user.subscriptions %}
+      <tr><th>{{ x.label }}</th><td>{% if x.active %}ينتهي {{ x.expires|local('%Y/%m/%d') }} <span class="muted small">(باقي {{ x.days }} يوم)</span>{% else %}<span class="badge warn">منتهي</span>{% endif %}</td></tr>
+      {% endfor %}
     </table>
     <div class="row" style="margin-top:1rem">
       {% if not g.user.is_admin %}<a class="btn" href="{{ url_for('student.subscribe') }}">تجديد / تفعيل الاشتراك</a>{% endif %}
