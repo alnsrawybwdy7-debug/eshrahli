@@ -1,0 +1,16 @@
+{% set ep = request.endpoint or '' %}
+<div class="dev-bar">
+  <div class="row between">
+    <strong>🛠️ لوحة المطوّر</strong>
+    <form method="post" action="{{ url_for('dev.lock') }}" class="inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-ghost" type="submit">قفل</button>
+    </form>
+  </div>
+</div>
+<nav class="tabs">
+  <a href="{{ url_for('dev.dashboard') }}" class="{{ 'active' if ep == 'dev.dashboard' }}">الحالة</a>
+  <a href="{{ url_for('dev.security') }}" class="{{ 'active' if ep == 'dev.security' }}">الأمان والهجمات</a>
+  <a href="{{ url_for('dev.files') }}" class="{{ 'active' if ep in ('dev.files','dev.file_view') }}">تحديث الملفات</a>
+  {% if g.user and g.user.is_admin %}<a href="{{ url_for('admin.dashboard') }}">← لوحة التحكم</a>{% endif %}
+</nav>

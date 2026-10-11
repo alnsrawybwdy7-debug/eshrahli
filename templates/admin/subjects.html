@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}المواد{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>المواد والمحتوى</h1></div></div>
+{% include "admin/_nav.html" %}
+
+<div class="two-col">
+  <section>
+    {% if subjects %}
+    <div class="list">
+      {% for s in subjects %}
+      {% set c = counts.get(s.id, {}) %}
+      <div class="item admin-item {{ 'dim' if not s.is_visible }}">
+        <div class="subject-initial">{{ s.name[:1] }}</div>
+        <div class="body">
+          <a class="title" href="{{ url_for('admin.subject', sid=s.id) }}">{{ s.name }}</a>
+          <span class="sub">{{ c.get('video', 0) }} فيديو · {{ c.get('summary', 0) }} ملخص · {{ c.get('homework', 0) }} واجب{% if not s.is_visible %} · <b>مخفية عن الطلاب</b>{% endif %}</span>
+        </div>
+        <div class="item-actions">
+          <form class="inline" method="post" action="{{ url_for('admin.subject_move', sid=s.id) }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-ghost" name="dir" value="up" title="لفوك" {% if loop.first %}disabled{% endif %}>▲</button>
+            <button class="btn btn-sm btn-ghost" name="dir" value="down" title="لجوه" {% if loop.last %}disabled{% endif %}>▼</button>
+          </form>
+          <a class="btn btn-sm btn-primary" href="{{ url_for('admin.subject', sid=s.id) }}">إدارة</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">ماكو مواد. ضيف أول مادة من النموذج.</div>
+    {% endif %}
+  </section>
+  <aside>
+    <div class="card">
+      <h2>مادة جديدة</h2>
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><label for="name">اسم المادة</label><input id="name" name="name" type="text" required maxlength="150"></div>
+        <div class="field"><label for="description">وصف قصير (اختياري)</label><textarea id="description" name="description" maxlength="2000"></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit">إضافة</button>
+      </form>
+    </div>
+  </aside>
+</div>
+{% endblock %}

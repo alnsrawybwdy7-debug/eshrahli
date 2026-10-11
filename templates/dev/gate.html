@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}دخول المطوّر{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-head">
+    <h1>🛠️ لوحة المطوّر</h1>
+    <p class="muted">بوابة مستقلة خاصة بالمطوّر. اكتب كلمة مرور المطوّر حتى تدخل (ما تحتاج تسجّل دخول حساب).</p>
+  </div>
+  <div class="card">
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="password">كلمة مرور المطوّر</label>
+        <input id="password" name="password" type="password" class="ltr" autocomplete="off" required autofocus>
+        <span class="hint">غير كلمة مرور حسابك. تنضبط من <span class="ltr">DEV_PASSWORD</span> بملف <span class="ltr">.env</span>.</span>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">دخول</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

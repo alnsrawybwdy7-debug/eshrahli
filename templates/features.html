@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo, tg_icon, icon %}
+{% block title %}ماذا نقدم لكم{% endblock %}
+{% block content %}
+{% macro img(n) %}{{ url_for('static', filename='img/features/' ~ n ~ '.webp') }}{% endmacro %}
+
+<section class="fx-hero">
+  <div class="brand-mark fx-logo">{{ logo() }}</div>
+  <h1>ماذا نقدم لكم بمنصة <em>{{ site_name }}</em>؟</h1>
+  <p class="fx-lead">{{ site_tagline }}. كل اللي تحتاجه للمادة بمكان واحد: شروحات بالفيديو، ملخصات، تقارير، وميت مباشر ويا {{ teacher_label }} {{ teacher }} قبل امتحان المد والفاينل.</p>
+  <div class="fx-cta">
+    {% if g.user %}
+      <a class="btn btn-primary" href="{{ url_for('student.home') }}">ادخل للمواد</a>
+    {% else %}
+      <a class="btn btn-primary" href="{{ url_for('auth.register') }}">سوّي حساب</a>
+      <a class="btn" href="{{ url_for('auth.login') }}">عندي حساب، سجّل دخول</a>
+    {% endif %}
+  </div>
+  <div class="fx-chips">
+    <span class="badge ok">فيديوات شرح</span>
+    <span class="badge ok">ملخصات</span>
+    <span class="badge ok">تقارير</span>
+    <span class="badge live">بث مباشر</span>
+    <span class="badge">موبايل · آيباد · لابتوب</span>
+  </div>
+</section>
+
+<section class="fx-row">
+  <div class="fx-text">
+    <span class="fx-num">1</span>
+    <h2>كل مواد القسم مرتبة</h2>
+    <p>أول ما تدخل تشوف المواد المشترك بيها، وكل مادة إلها أقسام واضحة:</p>
+    <ul class="fx-list">
+      <li><b>فيديوات الشرح</b> مرتبة حسب المحاضرات.</li>
+      <li><b>الملخصات</b> لأهم النقاط قبل الامتحان.</li>
+      <li><b>الواجبات</b> كلها بمكان واحد.</li>
+    </ul>
+  </div>
+  <figure class="fx-phone"><img src="{{ img('home') }}" alt="صفحة المواد بالمنصة" loading="lazy" width="540" height="1169"></figure>
+</section>
+
+<section class="fx-row rev">
+  <div class="fx-text">
+    <span class="fx-num">2</span>
+    <h2>شرح كل محاضرة بفيديو</h2>
+    <p>تشوف الشرح بالوقت اللي يناسبك، وتعيده قد ما تريد.</p>
+    <ul class="fx-list">
+      <li>المنصة <b>تتذكر وين وقفت</b> وتكمّل منه.</li>
+      <li>قائمة فيديوات المادة جنب المشغّل، تنتقل بينهن بسهولة.</li>
+      <li>يشتغل على الموبايل والآيباد واللابتوب <b>بدون أي برنامج</b>.</li>
+    </ul>
+  </div>
+  <figure class="fx-phone"><img src="{{ img('watch') }}" alt="مشغّل فيديو الشرح" loading="lazy" width="540" height="1169"></figure>
+</section>
+
+<section class="fx-row">
+  <div class="fx-text">
+    <span class="fx-num">3</span>
+    <h2>ملخصات وواجبات جاهزة</h2>
+    <p>ملفات PDF وغيرها، تفتحها مباشرة بالمتصفح أو تنزّلها عندك وتراجع بيها حتى بدون إنترنت.</p>
+    <ul class="fx-list">
+      <li>ملخص لكل فصل بأهم النقاط.</li>
+      <li>الواجبات مرتبة ويا تاريخ إضافتها.</li>
+    </ul>
+  </div>
+  <figure class="fx-phone"><img src="{{ img('summary') }}" alt="صفحة الملخصات" loading="lazy" width="540" height="1169"></figure>
+</section>
+
+<section class="fx-row rev fx-live">
+  <div class="fx-text">
+    <span class="fx-num live">4</span>
+    <h2>بث مباشر ويا {{ teacher_label }}</h2>
+    <p>{{ teacher_label }} {{ teacher }} تفتح ميت مباشر للمراجعة قبل امتحان المد والفاينل، لمشتركي كل مادة.</p>
+    <ul class="fx-list">
+      <li>أول ما يبدي البث يطلعلك زر <b>«انضمام للاتصال»</b> بكل الصفحات.</li>
+      <li>تشوف شاشة الشرح وتسمع الصوت مباشرة.</li>
+      <li><b>دردشة</b> تكتب بيها سؤالك أثناء الشرح.</li>
+      <li>كله داخل المنصة، ما تحتاج زووم ولا أي تطبيق.</li>
+    </ul>
+  </div>
+  <figure class="fx-phone"><img src="{{ img('live') }}" alt="غرفة البث المباشر" loading="lazy" width="540" height="1169"></figure>
+</section>
+
+<section class="fx-row">
+  <div class="fx-text">
+    <span class="fx-num">5</span>
+    <h2>طريقة الاشتراك</h2>
+    <ol class="fx-steps">
+      <li><b>سوّي حساب</b><span>اسمك واسم مستخدم وكلمة مرور.</span></li>
+      <li><b>راسلنا على تيليكرام</b><span>{% if telegram_user %}على <span class="ltr">@{{ telegram_user }}</span>، و{% endif %}نرسلك رمز الاشتراك.</span></li>
+      <li><b>اكتب الرمز وابدأ</b><span>مدة اشتراكك تبدي من لحظة إدخال الرمز.</span></li>
+    </ol>
+  </div>
+  <figure class="fx-phone"><img src="{{ img('subscribe') }}" alt="صفحة تفعيل الاشتراك" loading="lazy" width="540" height="1169"></figure>
+</section>
+
+<section class="fx-faq" id="prices">
+  <h2>أسعار الاشتراك</h2>
+  <p class="muted" style="text-align:center;margin-top:-.5rem">اشترك بالمادة اللي تحتاجها، أو بكل المواد مرة وحدة.</p>
+  {% set pricing_cta = 'none' if g.user else 'register' %}
+  {% include "_pricing.html" %}
+</section>
+
+<section class="fx-faq">
+  <h2>أسئلة تتكرر</h2>
+  <details class="box"><summary>أحتاج أنصّب برنامج؟</summary><p>لا. المنصة تشتغل من المتصفح على الموبايل والآيباد واللابتوب.</p></details>
+  <details class="box"><summary>شنو الفرق بين اشتراك المادة وكل المواد؟</summary><p>اشتراك المادة يفتحلك مادة وحدة بكل محتواها وميتها. اشتراك كل المواد يفتحلك كل مواد القسم وكل الميتات بحساب واحد.</p></details>
+  <details class="box"><summary>أكدر أشترك بمادة وبعدين أضيف غيرها؟</summary><p>إي، كل رمز تضيفه يفتحلك المواد اللي بيه، واشتراكاتك تبقى كلها بنفس الحساب.</p></details>
+  <details class="box"><summary>المدة تبدي من وكت؟</summary><p>من لحظة تفعيل الرمز بحسابك، مو من وقت شرائه.</p></details>
+  <details class="box"><summary>إذا خلص اشتراكي شيصير؟</summary><p>حسابك يبقى موجود. تاخذ رمز جديد وتفعّله، ويرجع كلشي. وإذا جددت قبل لا يخلص، المدة الجديدة تنضاف على الباقية.</p></details>
+  <details class="box"><summary>أكدر أفتح حسابي من أكثر من جهاز؟</summary><p>الحساب شخصي ويشتغل على جهاز واحد بنفس الوقت. إذا سجّلت دخول من جهاز ثاني، يطلع الجهاز الأول تلقائياً. هذا حتى نحمي اشتراكك ومحتوى المنصة.</p></details>
+  <details class="box"><summary>الميت المباشر يتسجّل؟</summary><p>الميت ما يتسجّل تلقائياً، فحاول تحضره بوقته. ومن يبدي، يطلع زر الانضمام لمشتركي المادة بكل صفحات المنصة.</p></details>
+</section>
+
+<section class="fx-final card">
+  <h2>جاهز تبدي؟</h2>
+  <p class="muted">سوّي حسابك وراسلنا حتى نرسلك رمز الاشتراك.</p>
+  <div class="fx-cta">
+    {% if not g.user %}<a class="btn btn-primary" href="{{ url_for('auth.register') }}">سوّي حساب</a>{% endif %}
+    {% if telegram_url %}<a class="btn btn-tg" href="{{ telegram_url }}" target="_blank" rel="noopener">{{ tg_icon() }} راسلنا على تيليكرام</a>{% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo, tg_icon %}
+{% block title %}تسجيل الدخول{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-head">
+    <div class="brand-mark">{{ logo() }}</div>
+    <h1>{{ site_name }}</h1>
+    <p class="muted">{{ site_tagline }}. سجّل دخولك حتى توصل للمواد.</p>
+  </div>
+  <a class="fx-entry" href="{{ url_for('auth.features') }}">
+    <span class="fx-entry-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17l.7 1.8 1.8.7-1.8.7L19 22l-.7-1.8-1.8-.7 1.8-.7z"/></svg></span>
+    <span class="fx-entry-body"><b>ماذا نقدم لكم بالمنصة؟</b><small>شروحات، ملخصات، تقارير، وميت قبل امتحان المد والفاينل</small></span>
+    <span class="fx-entry-arrow" aria-hidden="true">←</span>
+  </a>
+  <div class="price-strip">
+    <span>مادة واحدة <b>{{ price_subject|money }}</b> {{ currency }}</span>
+    <span>كل المواد <b>{{ price_all|money }}</b> {{ currency }}</span>
+  </div>
+  <div class="card">
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="username">اسم المستخدم</label>
+        <input id="username" name="username" type="text" class="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" value="{{ username or '' }}" required>
+      </div>
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input id="password" name="password" type="password" class="ltr" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">دخول</button>
+    </form>
+  </div>
+  <p class="muted small" style="text-align:center;margin-top:1rem">ما عندك حساب؟ <a href="{{ url_for('auth.register') }}">سوّي حساب جديد</a></p>
+</div>
+{% endblock %}

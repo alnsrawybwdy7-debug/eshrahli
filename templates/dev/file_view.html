@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}عرض ملف{% endblock %}
+{% block content %}
+{% include "dev/_nav.html" %}
+<div class="page-head">
+  <div><div class="crumbs"><a href="{{ url_for('dev.files') }}">تحديث الملفات</a> / عرض</div><h1 class="ltr" style="font-size:1.1rem">{{ path }}</h1></div>
+  <a class="btn btn-sm" href="{{ url_for('dev.files') }}">رجوع</a>
+</div>
+<div class="card" style="padding:0;overflow:hidden">
+  <pre class="code-view" dir="ltr"><code>{{ content }}</code></pre>
+</div>
+{% endblock %}

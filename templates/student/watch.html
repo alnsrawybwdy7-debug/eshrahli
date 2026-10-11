@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ c.title }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('student.home') }}">المواد</a> / <a href="{{ url_for('student.subject', sid=c.subject_id) }}">{{ c.subject.name }}</a></div>
+<div class="two-col" style="margin-top:.5rem">
+  <div>
+    <div class="video-wrap">
+      <video id="player" src="{{ src }}" controls playsinline preload="metadata"
+             controlslist="nodownload noplaybackrate" disablepictureinpicture></video>
+      <div class="watermark" id="wm">{{ g.user.username }}</div>
+    </div>
+    <h1 style="margin-top:1rem">{{ c.title }}</h1>
+    {% if c.description %}<p class="muted" style="white-space:pre-line">{{ c.description }}</p>{% endif %}
+  </div>
+  <aside>
+    <div class="card flat">
+      <h3>فيديوات المادة</h3>
+      <div class="list playlist">
+        {% for v in playlist %}
+        <a class="item {{ 'current' if v.id == c.id }} {{ 'dim' if not v.is_visible }}" href="{{ url_for('student.watch', cid=v.id) }}">
+          <span class="num">{{ loop.index }}</span>
+          <span class="body"><span class="title">{{ v.title }}</span></span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/watch.js') }}"></script>{% endblock %}

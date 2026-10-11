@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}تحديث الملفات{% endblock %}
+{% block content %}
+{% include "dev/_nav.html" %}
+
+<div class="notice">
+  ارفع هنا نسخة جديدة من أي ملف بالمشروع بدون ما تفتح الترمنال. بعد الرفع، ملفات بايثون (.py) تتفحص لغوياً تلقائياً،
+  وتنحفظ نسخة احتياطية من القديم. <b>مهم:</b> بعد أي تحديث، اضغط <b>Reload</b> بتبويب Web بـ PythonAnywhere حتى يشتغل التغيير.
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h2>رفع ملف جديد</h2>
+    <form method="post" action="{{ url_for('dev.file_upload') }}" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="path">مسار الملف بالمشروع</label>
+        <input id="path" name="path" type="text" class="ltr" list="paths" placeholder="templates/student/home.html" required>
+        <datalist id="paths">{% for f in files %}<option value="{{ f }}">{% endfor %}</datalist>
+        <span class="hint">المسموح: <span class="ltr">templates/ · static/ · routes/</span> وملفات <span class="ltr">.py</span> بالجذر.</span>
+      </div>
+      <div class="field">
+        <label for="file">الملف الجديد</label>
+        <input id="file" name="file" type="file" required>
+      </div>
+      <div class="field"><label for="note">ملاحظة (اختياري)</label><input id="note" name="note" type="text" maxlength="200" placeholder="شنو غيّرت؟"></div>
+      <button class="btn btn-primary btn-block" type="submit">رفع واستبدال</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>ملفات المشروع</h3>
+    <p class="muted small">اضغط على ملف حتى تشوف محتواه الحالي.</p>
+    <div class="list" style="max-height:420px;overflow-y:auto">
+      {% for f in files %}
+      <a class="row between small" href="{{ url_for('dev.file_view', path=f) }}"><span class="ltr">{{ f }}</span><span class="muted">عرض</span></a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<h2 style="margin-top:1.5rem">آخر التحديثات</h2>
+{% if logs %}
+<div class="table-wrap">
+  <table>
+    <tr><th>الوقت</th><th>الملف</th><th>العملية</th><th>ملاحظة</th><th></th></tr>
+    {% for lg in logs %}
+    <tr>
+      <td class="small" style="white-space:nowrap">{{ lg.at|local('%m/%d %I:%M %p') }}</td>
+      <td class="small ltr">{{ lg.path }}</td>
+      <td><span class="badge {{ 'warn' if lg.action == 'rollback' }}">{{ 'رجوع' if lg.action == 'rollback' else 'تحديث' }}</span></td>
+      <td class="small">{{ lg.note or '—' }}</td>
+      <td>
+        {% if lg.backup %}
+        <form class="inline" method="post" action="{{ url_for('dev.file_rollback', log_id=lg.id) }}" data-confirm="ترجّع {{ lg.path }} للنسخة اللي قبل هذا التحديث؟">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-ghost" type="submit">رجوع للنسخة السابقة</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% else %}
+<div class="empty">ماكو تحديثات بعد.</div>
+{% endif %}
+{% endblock %}

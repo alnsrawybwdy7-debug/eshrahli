@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}المواد{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>أهلاً {{ g.user.name.split()[0] }}</h1>
+    <p class="muted">
+      {% if g.user.is_admin %}هذي الواجهة مثل ما يشوفها الطلاب.
+      {% elif g.user.all_access %}مشترك بكل المواد · باقي {{ g.user.days_left }} يوم.
+      {% else %}{% set n = g.user.active_subject_ids|length %}مشترك {{ 'بمادة وحدة' if n == 1 else ('بمادتين' if n == 2 else ('بـ ' ~ n ~ (' مواد' if n <= 10 else ' مادة'))) }}. المواد المقفولة تكدر تشترك بيها من <a href="{{ url_for('student.subscribe') }}">صفحة الاشتراك</a>.{% endif %}
+    </p>
+  </div>
+  {% if g.user.is_admin %}<a class="btn" href="{{ url_for('admin.subjects') }}">إدارة المواد</a>{% endif %}
+</div>
+
+{% if subjects %}
+<div class="grid">
+  {% for s in subjects %}
+  {% set c = counts.get(s.id, {}) %}
+  {% set open = g.user.can_access(s.id) %}
+  <a class="card subject-card {{ 'locked' if not open }}" href="{{ url_for('student.subject', sid=s.id) if open else url_for('student.subscribe', subject=s.id) }}">
+    <div class="row">
+      <div class="subject-initial">{{ s.name[:1] }}</div>
+      <h3 style="margin:0">{{ s.name }}</h3>
+      {% if not s.is_visible %}<span class="badge warn">مخفية</span>{% endif %}
+      {% if not open %}<span class="badge">🔒 مقفولة</span>{% endif %}
+    </div>
+    {% if s.description %}<div class="desc">{{ s.description }}</div>{% endif %}
+    <div class="meta">
+      {% for k in KINDS if c.get(k) or k == 'video' %}
+      <span class="badge">{{ c.get(k, 0) }} {{ KIND_SINGULAR[k] }}</span>
+      {% endfor %}
+      {% if not open %}<span class="badge ok">اشترك بالمادة ←</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">ماكو مواد بعد. ترجع قريباً إن شاء الله.</div>
+{% endif %}
+{% endblock %}

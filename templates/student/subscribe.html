@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo, tg_icon %}
+{% block title %}الاشتراك{% endblock %}
+{% block content %}
+<div class="wide-wrap" style="margin-top:.5rem">
+  {% if g.user.has_active_sub %}
+  <div class="card" style="margin-bottom:1.25rem">
+    <div class="row between" style="margin-bottom:.75rem">
+      <h2 style="margin:0">اشتراكاتك</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('student.home') }}">المواد</a>
+    </div>
+    <div class="subs-list">
+      {% for x in g.user.subscriptions %}
+      <div class="row">
+        <strong>{{ x.label }}</strong>
+        {% if x.active %}
+          <span class="badge ok">باقي {{ x.days }} يوم · ينتهي {{ x.expires|local('%Y/%m/%d') }}</span>
+        {% else %}
+          <span class="badge warn">منتهي</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="auth-head">
+    <div class="brand-mark">{{ logo() }}</div>
+    <h1>{{ 'اشتراكك منتهي' if g.user.sub_status == 'expired' else 'فعّل اشتراكك' }}</h1>
+    <p class="muted">اشترك بمادة وحدة أو بكل المواد، وتفتحلك الشروحات والملخصات والواجبات.</p>
+  </div>
+  {% endif %}
+
+  <h2>1. اختار اشتراكك وراسلنا</h2>
+  <p class="muted">اضغط على الاشتراك اللي تريده، تنفتح محادثة تيليكرام برسالة جاهزة بيها اسم المستخدم مالك: <span class="ltr">{{ g.user.username }}</span></p>
+  {% set pricing_cta = 'subscribe' %}
+  {% include "_pricing.html" %}
+  {% if whatsapp %}
+  <p class="small" style="text-align:center;margin-top:.75rem">أو على <a href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">واتساب</a></p>
+  {% endif %}
+
+  <div class="card" style="margin-top:1.5rem">
+    <h2>2. {{ 'ضيف رمز جديد' if g.user.has_active_sub else 'اكتب رمز الاشتراك' }}</h2>
+    <form method="post" autocomplete="off">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <input name="code" type="text" class="code-input" placeholder="XXXX-XXXX-XXXX" maxlength="20" required autocapitalize="characters" spellcheck="false" aria-label="رمز الاشتراك">
+        <span class="hint">كل رمز يشتغل مرة وحدة، ومدته تبدي من لحظة إدخاله. إذا عندك اشتراك فعّال بنفس المادة، المدة الجديدة تنضاف على الباقية.</span>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">تفعيل</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}سجل الأمان{% endblock %}
+{% block content %}
+{% include "dev/_nav.html" %}
+
+<form class="row" method="get" style="margin-bottom:1rem">
+  <select name="kind" style="max-width:220px" onchange="this.form.submit()">
+    <option value="">كل الأنواع</option>
+    {% for k in kinds %}<option value="{{ k }}" {% if kind == k %}selected{% endif %}>{{ EVENT_AR.get(k, k) }}</option>{% endfor %}
+  </select>
+  <span class="muted small">آخر {{ events|length }} حدث</span>
+</form>
+
+{% if events %}
+<div class="table-wrap">
+  <table>
+    <tr><th>الوقت</th><th>النوع</th><th>IP</th><th>المسار</th><th>تفاصيل</th><th></th></tr>
+    {% for e in events %}
+    <tr>
+      <td class="small" style="white-space:nowrap">{{ e.at|local('%m/%d %I:%M %p') }}</td>
+      <td><span class="badge {{ 'danger' if e.kind in ('login_fail','probe','blocked_hit','dev_gate_fail') else ('warn' if 'ratelimit' in e.kind else '') }}">{{ EVENT_AR.get(e.kind, e.kind) }}</span></td>
+      <td class="ltr small">{{ e.ip }}</td>
+      <td class="small ltr" style="max-width:200px;overflow-wrap:anywhere">{{ e.path }}</td>
+      <td class="small">{{ e.detail }}</td>
+      <td>
+        {% if e.ip and e.ip != '?' %}
+        <form class="inline" method="post" action="{{ url_for('dev.block_ip') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="ip" value="{{ e.ip }}"><input type="hidden" name="hours" value="24">
+          <input type="hidden" name="reason" value="{{ EVENT_AR.get(e.kind, e.kind) }}">
+          <input type="hidden" name="back" value="{{ request.full_path }}">
+          <button class="btn btn-sm btn-danger" type="submit" title="حظر هذا العنوان 24 ساعة">حظر</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% else %}
+<div class="empty">ماكو أحداث بهذا النوع.</div>
+{% endif %}
+{% endblock %}

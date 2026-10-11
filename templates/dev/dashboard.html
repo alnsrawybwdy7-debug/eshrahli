@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}حالة الموقع{% endblock %}
+{% block content %}
+{% include "dev/_nav.html" %}
+
+{% if stats.renew_days is not none and stats.renew_days <= 7 %}
+<div class="notice">⏰ استضافة PythonAnywhere تنتهي خلال <b>{{ stats.renew_days }} يوم</b> ({{ stats.renew_date }}). ادخل تبويب Web واضغط «Run until 1 month from today».</div>
+{% endif %}
+
+<div class="stats">
+  <div class="stat"><div class="n">{{ stats.students }}</div><div class="l">طالب</div></div>
+  <div class="stat"><div class="n">{{ stats.subjects }}</div><div class="l">مادة</div></div>
+  <div class="stat"><div class="n">{{ stats.files }}</div><div class="l">ملف</div></div>
+  <div class="stat"><div class="n">{{ stats.events24 }}</div><div class="l">حدث أمني (24س)</div></div>
+  <div class="stat"><div class="n">{{ stats.blocked }}</div><div class="l">IP محظور</div></div>
+  {% if stats.renew_days is not none %}
+  <div class="stat"><div class="n">{{ stats.renew_days }}</div><div class="l">يوم للتجديد</div></div>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div class="stack">
+    <div class="card">
+      <h2>التخزين (R2)</h2>
+      <div class="row between"><span class="muted">المستخدم</span><strong>{{ stats.used|filesize }} من {{ stats.free|filesize }}</strong></div>
+      <div class="progress" style="margin-top:.5rem"><div style="width:{{ [stats.pct,100]|min }}%;{% if stats.pct > 85 %}background:var(--danger){% elif stats.pct > 65 %}background:var(--warn){% endif %}"></div></div>
+      <p class="muted small" style="margin-top:.5rem">{{ stats.pct }}% مستخدم.
+        {% if not r2_on %}<b>ملاحظة:</b> R2 مو مفعّل، الملفات تنخزن على السيرفر.{% endif %}
+        الرقم محسوب من أحجام الملفات المسجّلة بالمنصة. للرقم الدقيق شوف لوحة Cloudflare R2.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>ملخص الهجمات (آخر 24 ساعة)</h2>
+      {% if by_kind %}
+      <div class="row" style="flex-wrap:wrap;gap:.4rem">
+        {% for k, n in by_kind.items() %}
+        <span class="badge {{ 'danger' if k in ('login_fail','probe','blocked_hit','dev_gate_fail') else ('warn' if 'ratelimit' in k else '') }}">{{ EVENT_AR.get(k, k) }}: {{ n }}</span>
+        {% endfor %}
+      </div>
+      {% else %}<p class="muted">ماكو أحداث مريبة بآخر 24 ساعة 👍</p>{% endif %}
+
+      {% if top_ips %}
+      <h3 style="margin-top:1rem">أكثر العناوين محاولات</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>IP</th><th>محاولات</th><th></th></tr>
+          {% for ip, n in top_ips %}
+          <tr>
+            <td class="ltr">{{ ip }}</td><td>{{ n }}</td>
+            <td>
+              <form class="inline" method="post" action="{{ url_for('dev.block_ip') }}">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="ip" value="{{ ip }}"><input type="hidden" name="hours" value="24">
+                <input type="hidden" name="reason" value="محاولات متكررة">
+                <button class="btn btn-sm btn-danger" type="submit">حظر 24 ساعة</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% endif %}
+      <p style="margin-top:.75rem"><a class="btn btn-sm" href="{{ url_for('dev.security') }}">كل سجل الأمان ←</a></p>
+    </div>
+  </div>
+
+  <aside class="stack">
+    <div class="card">
+      <h3>فحص الإعدادات</h3>
+      <div class="list">
+        {% for it in checklist %}
+        <div class="row" style="gap:.5rem;align-items:flex-start">
+          <span>{{ '✅' if it.ok else '⚠️' }}</span>
+          <div><div>{{ it.label }}</div>{% if not it.ok and it.hint %}<div class="muted small">{{ it.hint }}</div>{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>حظر IP يدوي</h3>
+      <form method="post" action="{{ url_for('dev.block_ip') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="field"><input name="ip" type="text" class="ltr" placeholder="1.2.3.4" required></div>
+        <div class="form-row">
+          <div class="field"><input name="hours" type="number" min="0" placeholder="ساعات (0 = دائم)"></div>
+        </div>
+        <div class="field"><input name="reason" type="text" placeholder="السبب (اختياري)" maxlength="200"></div>
+        <button class="btn btn-danger btn-block" type="submit">حظر</button>
+      </form>
+    </div>
+
+    {% if blocks %}
+    <div class="card">
+      <h3>العناوين المحظورة</h3>
+      <div class="list">
+        {% for b in blocks %}
+        <div class="row between">
+          <div><span class="ltr">{{ b.ip }}</span><div class="muted small">{{ b.reason or '—' }}{% if b.expires_at %} · لحد {{ b.expires_at|local('%m/%d %I:%M %p') }}{% else %} · دائم{% endif %}</div></div>
+          <form class="inline" method="post" action="{{ url_for('dev.unblock_ip', bid=b.id) }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-ghost" type="submit">رفع</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}
