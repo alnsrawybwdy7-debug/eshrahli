@@ -6,13 +6,15 @@
   <div class="auth-head">
     <div class="brand-mark">{{ logo() }}</div>
     <h1>حساب جديد</h1>
-    <p class="muted">بعد التسجيل تفعّل اشتراكك برمز من المطور</p>
+    <p class="muted">{{ 'بعد التسجيل، تفعيل الاشتراك يصير من موقع المنصة' if in_app else 'بعد التسجيل تفعّل اشتراكك برمز من المطور' }}</p>
   </div>
+  {% if not in_app %}
   <div class="price-strip">
     <span>مادة واحدة <b>{{ price_subject|money }}</b> {{ currency }}</span>
     <span>كل المواد <b>{{ price_all|money }}</b> {{ currency }}</span>
     <a href="#prices">التفاصيل ↓</a>
   </div>
+  {% endif %}
   <div class="card">
     <form method="post">
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
@@ -40,6 +42,7 @@
   <p class="muted small" style="text-align:center;margin-top:1rem">عندك حساب؟ <a href="{{ url_for('auth.login') }}">سجّل دخول</a></p>
 </div>
 
+{% if not in_app %}
 <section class="wide-wrap" id="prices">
   <h2 style="text-align:center">أسعار الاشتراك</h2>
   <p class="muted" style="text-align:center">بعد ما تسوي حسابك، راسلنا وناخذ اشتراكك ونرسلك الرمز.</p>
@@ -47,4 +50,5 @@
   {% include "_pricing.html" %}
   <p class="small" style="text-align:center;margin-top:1rem"><a href="{{ url_for('auth.features') }}">ماذا نقدم لكم بالمنصة؟</a></p>
 </section>
+{% endif %}
 {% endblock %}

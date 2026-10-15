@@ -4,3 +4,12 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+# Firebase service account (secret)
+firebase-sa.json
+*service-account*.json
+# Android app secrets (never commit)
+google-services.json
+env.json
+key.properties
+*.jks
+*.keystore

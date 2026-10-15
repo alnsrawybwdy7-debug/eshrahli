@@ -30,7 +30,10 @@ def kind_counts(subject_ids=None, include_hidden=False):
 
 
 def no_access(subject):
-    flash(f"مادة «{subject.name}» مو ضمن اشتراكك. اشترك بيها أو بكل المواد حتى تفتحها.", "warn")
+    if g.get("in_app"):
+        flash(f"مادة «{subject.name}» مو ضمن اشتراكك.", "warn")
+    else:
+        flash(f"مادة «{subject.name}» مو ضمن اشتراكك. اشترك بيها أو بكل المواد حتى تفتحها.", "warn")
     return redirect(url_for("student.subscribe", subject=subject.id))
 
 

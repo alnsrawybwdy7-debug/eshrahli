@@ -257,3 +257,37 @@ class DeployLog(db.Model):
     backup = db.Column(db.String(400), default="")  # "" = file didn't exist before
     note = db.Column(db.String(200), default="")
     action = db.Column(db.String(16), default="upload")  # upload | rollback
+
+
+# ---------------- Mobile app (Flutter) API tokens ----------------
+class ApiToken(db.Model):
+    """A login from the mobile app. Only the SHA-256 of the token is stored. A token is valid while
+    its `ver` matches the user's session_version, so a login elsewhere or a password change ends it."""
+    __tablename__ = "api_tokens"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    ver = db.Column(db.Integer, default=0, nullable=False)
+    device = db.Column(db.String(120), default="")
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    last_used_at = db.Column(db.DateTime)
+
+    user = db.relationship("User", backref=db.backref("api_tokens", cascade="all, delete-orphan", lazy="select"))
+
+
+class PushDevice(db.Model):
+    """A phone that gets app notifications. Tied to the app login it registered with, so logging out
+    (or logging in on another phone) stops the notifications to this one."""
+    __tablename__ = "push_devices"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    api_token_id = db.Column(db.Integer, db.ForeignKey("api_tokens.id", ondelete="CASCADE"), nullable=False,
+                             index=True)
+    token = db.Column(db.String(512), unique=True, nullable=False)
+    platform = db.Column(db.String(16), default="android")
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    user = db.relationship("User", backref=db.backref("push_devices", cascade="all, delete-orphan", lazy="select"))
+    api_token = db.relationship("ApiToken", backref=db.backref("push_devices", cascade="all, delete-orphan",
+                                                               lazy="select"))

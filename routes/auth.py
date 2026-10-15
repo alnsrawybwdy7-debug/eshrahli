@@ -3,7 +3,7 @@ import re
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
-from models import User, db, utcnow
+from models import DeployLog, SecurityEvent, SubCode, User, db, utcnow
 from security import client_ip, limiter, log_event, login_required
 
 bp = Blueprint("auth", __name__)
@@ -133,3 +133,44 @@ def account():
             flash("تم تغيير كلمة المرور.", "ok")
             return redirect(url_for("auth.account"))
     return render_template("auth/account.html")
+
+
+@bp.route("/account/delete", methods=["POST"])
+@login_required
+def delete_account():
+    """Students can delete their own account (required by Google Play for apps with sign-up)."""
+    if g.user.is_admin:
+        flash("حساب المدرّسة/الأدمن ما ينحذف من هنا.", "error")
+        return redirect(url_for("auth.account"))
+    if not limiter.hit(f"delacct:{g.user.id}", 5, 900):
+        flash("محاولات كثيرة، جرّب بعدين.", "error")
+        return redirect(url_for("auth.account"))
+    if not g.user.check_password(request.form.get("password", "")):
+        flash("كلمة المرور غلط، ما انحذف الحساب.", "error")
+        return redirect(url_for("auth.account") + "#delete")
+    if request.form.get("confirm") != "1":
+        flash("أشّر على مربع التأكيد حتى ينحذف الحساب.", "error")
+        return redirect(url_for("auth.account") + "#delete")
+    uid = g.user.id
+    # Codes this student used stay spent (revoked) so they can never be redeemed again
+    SubCode.query.filter_by(used_by_id=uid).update({"used_by_id": None, "revoked": True}, synchronize_session=False)
+    SecurityEvent.query.filter_by(user_id=uid).update({"user_id": None}, synchronize_session=False)
+    DeployLog.query.filter_by(user_id=uid).update({"user_id": None}, synchronize_session=False)
+    db.session.delete(g.user)  # subject subscriptions are deleted with it
+    db.session.commit()
+    session.clear()
+    flash("انحذف حسابك وكل بياناته نهائياً.", "ok")
+    return redirect(url_for("auth.login"))
+
+
+@bp.route("/delete-account")
+def delete_account_info():
+    """Public page linked from the Google Play listing: how to delete an account and its data."""
+    if g.user and not g.user.is_admin:
+        return redirect(url_for("auth.account") + "#delete")
+    return render_template("legal/delete.html")
+
+
+@bp.route("/privacy")
+def privacy():
+    return render_template("legal/privacy.html")

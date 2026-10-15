@@ -81,6 +81,7 @@
   <figure class="fx-phone"><img src="{{ img('live') }}" alt="غرفة البث المباشر" loading="lazy" width="540" height="1169"></figure>
 </section>
 
+{% if not in_app %}
 <section class="fx-row">
   <div class="fx-text">
     <span class="fx-num">5</span>
@@ -100,10 +101,11 @@
   {% set pricing_cta = 'none' if g.user else 'register' %}
   {% include "_pricing.html" %}
 </section>
+{% endif %}
 
 <section class="fx-faq">
   <h2>أسئلة تتكرر</h2>
-  <details class="box"><summary>أحتاج أنصّب برنامج؟</summary><p>لا. المنصة تشتغل من المتصفح على الموبايل والآيباد واللابتوب.</p></details>
+  <details class="box"><summary>أحتاج أنصّب برنامج؟</summary><p>لا. المنصة تشتغل من المتصفح على الموبايل والآيباد واللابتوب، وأكو إلها تطبيق Android.</p></details>
   <details class="box"><summary>شنو الفرق بين اشتراك المادة وكل المواد؟</summary><p>اشتراك المادة يفتحلك مادة وحدة بكل محتواها وميتها. اشتراك كل المواد يفتحلك كل مواد القسم وكل الميتات بحساب واحد.</p></details>
   <details class="box"><summary>أكدر أشترك بمادة وبعدين أضيف غيرها؟</summary><p>إي، كل رمز تضيفه يفتحلك المواد اللي بيه، واشتراكاتك تبقى كلها بنفس الحساب.</p></details>
   <details class="box"><summary>المدة تبدي من وكت؟</summary><p>من لحظة تفعيل الرمز بحسابك، مو من وقت شرائه.</p></details>
@@ -114,10 +116,10 @@
 
 <section class="fx-final card">
   <h2>جاهز تبدي؟</h2>
-  <p class="muted">سوّي حسابك وراسلنا حتى نرسلك رمز الاشتراك.</p>
+  <p class="muted">{{ 'سجّل دخولك وابدأ بالمواد.' if in_app else 'سوّي حسابك وراسلنا حتى نرسلك رمز الاشتراك.' }}</p>
   <div class="fx-cta">
     {% if not g.user %}<a class="btn btn-primary" href="{{ url_for('auth.register') }}">سوّي حساب</a>{% endif %}
-    {% if telegram_url %}<a class="btn btn-tg" href="{{ telegram_url }}" target="_blank" rel="noopener">{{ tg_icon() }} راسلنا على تيليكرام</a>{% endif %}
+    {% if telegram_url and not in_app %}<a class="btn btn-tg" href="{{ telegram_url }}" target="_blank" rel="noopener">{{ tg_icon() }} راسلنا على تيليكرام</a>{% endif %}
   </div>
 </section>
 {% endblock %}

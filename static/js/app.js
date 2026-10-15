@@ -1,5 +1,12 @@
 (function () {
   "use strict";
+  // Installable app: offline page + cached static files (see /sw.js)
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {});
+    });
+  }
+
   var meta = document.querySelector('meta[name="csrf-token"]');
   window.CSRF = meta ? meta.content : "";
 

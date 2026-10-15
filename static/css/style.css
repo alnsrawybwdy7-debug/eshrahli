@@ -502,3 +502,13 @@ details.box[open] summary { margin-bottom: .75rem; }
 .dev-bar .btn-ghost:hover { background: rgba(255,255,255,.12); }
 .code-view { margin: 0; padding: 1rem; overflow: auto; max-height: 70vh; font-family: ui-monospace, Consolas, monospace; font-size: .82rem; line-height: 1.5; background: var(--surface-2); color: var(--ink); white-space: pre; }
 .progress > div { min-width: 2px; }
+
+/* ---------- Legal pages, account deletion, app mode ---------- */
+.legal { max-width: 760px; margin: 0 auto; line-height: 1.9; }
+.legal h1 { margin-bottom: .25rem; }
+.legal h2 { font-size: 1.15rem; margin: 1.6rem 0 .5rem; }
+.legal ul, .legal ol { padding-inline-start: 1.3rem; margin: 0 0 .75rem; }
+.legal li { margin-bottom: .35rem; }
+.danger-zone { margin-top: 1.25rem; border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); }
+.danger-zone h2 { color: var(--danger); }
+.app-note p { line-height: 1.9; margin: 0 0 1rem; }

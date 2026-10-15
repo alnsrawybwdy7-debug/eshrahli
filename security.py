@@ -3,6 +3,7 @@ import secrets
 import threading
 import time
 from collections import defaultdict, deque
+from datetime import timedelta
 from functools import wraps
 
 from flask import abort, current_app, flash, g, redirect, request, session, url_for
@@ -81,12 +82,15 @@ _block_cache = {"at": 0.0, "ips": {}}  # ip -> expires_epoch (0 = permanent); re
 
 def log_event(kind, detail="", path=None):
     """Record a noteworthy/suspicious request. Never breaks the request if the DB is busy."""
-    from models import SecurityEvent, db
+    from models import SecurityEvent, db, utcnow
     try:
         db.session.add(SecurityEvent(
             kind=kind[:32], ip=client_ip()[:64],
             user_id=(g.user.id if g.get("user") else None),
             path=(path if path is not None else request.path)[:300], detail=str(detail)[:300]))
+        if secrets.randbelow(50) == 0:  # now and then, drop logs older than 90 days (privacy policy)
+            SecurityEvent.query.filter(SecurityEvent.at < utcnow() - timedelta(days=90)).delete(
+                synchronize_session=False)
         db.session.commit()
     except Exception:
         db.session.rollback()

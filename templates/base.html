@@ -9,6 +9,9 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}{% endblock %} · {{ site_name }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('pwa.manifest') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -27,7 +30,7 @@
         <a href="{{ url_for('live.room') }}" class="{{ 'active' if ep == 'live.room' }}">البث المباشر</a>
       {% endif %}
       {% if not g.user.is_admin %}
-        <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">الاشتراك</a>
+        <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">{{ 'اشتراكي' if in_app else 'الاشتراك' }}</a>
       {% endif %}
       {% if g.user.is_admin %}
         <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">لوحة التحكم</a>
@@ -38,7 +41,7 @@
         <button class="linklike" type="submit">خروج</button>
       </form>
     </nav>
-    {% elif telegram_url %}
+    {% elif telegram_url and not in_app %}
     <a class="tg-link" href="{{ telegram_url }}" target="_blank" rel="noopener">{{ tg_icon() }}<span>تواصل</span></a>
     {% endif %}
   </div>
@@ -69,7 +72,8 @@
 <footer class="footer">
   <span>{{ site_name }}</span>
   <span class="sep">·</span><a href="{{ url_for('auth.features') }}">ماذا نقدم لكم</a>
-  {% if telegram_url %}<span class="sep">·</span><a href="{{ telegram_url }}" target="_blank" rel="noopener">للتواصل: <span class="ltr">@{{ telegram_user }}</span></a>{% endif %}
+  <span class="sep">·</span><a href="{{ url_for('auth.privacy') }}">الخصوصية</a>
+  {% if telegram_url and not in_app %}<span class="sep">·</span><a href="{{ telegram_url }}" target="_blank" rel="noopener">للتواصل: <span class="ltr">@{{ telegram_user }}</span></a>{% endif %}
 </footer>
 
 {% if has_tabs %}
@@ -86,7 +90,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>التحكم</span></a>
   {% else %}
   <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3"/><circle cx="12" cy="6" r="3"/><path d="M12 9v4"/></svg><span>الاشتراك</span></a>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3"/><circle cx="12" cy="6" r="3"/><path d="M12 9v4"/></svg><span>{{ 'اشتراكي' if in_app else 'الاشتراك' }}</span></a>
   {% endif %}
   <a href="{{ url_for('auth.account') }}" class="{{ 'active' if ep == 'auth.account' }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>حسابي</span></a>

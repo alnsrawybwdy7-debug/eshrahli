@@ -5,6 +5,7 @@ from datetime import timedelta
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
 from sqlalchemy import and_, func, or_
 
+import push
 import storage
 from models import KINDS, Content, LiveSession, SubCode, Subject, SubjectSub, User, db, utcnow
 from routes.student import kind_counts
@@ -212,6 +213,7 @@ def content_create(sid):
                 position=pos, is_visible=request.form.get("is_visible", "1") == "1")
     db.session.add(c)
     db.session.commit()
+    push.notify_new_content(c)
     return jsonify(ok=True, id=c.id)
 
 

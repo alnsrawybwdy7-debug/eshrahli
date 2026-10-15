@@ -3,7 +3,7 @@ from datetime import timezone
 from zoneinfo import ZoneInfo
 
 import click
-from flask import Flask, abort, g, render_template, request, session
+from flask import Flask, abort, g, jsonify, render_template, request, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import livekit_util
@@ -11,6 +11,9 @@ import storage
 from config import Config
 from models import KIND_LABELS, KIND_SINGULAR, KINDS, LiveSession, User, db
 from security import check_csrf, client_ip, csrf_token, is_blocked, log_event
+
+
+APP_COOKIE = "app_mode"
 
 
 def create_app():
@@ -34,11 +37,13 @@ def create_app():
     db.init_app(app)
 
     from routes.admin import bp as admin_bp
+    from routes.api import bp as api_bp
     from routes.auth import bp as auth_bp
     from routes.dev import bp as dev_bp
     from routes.live import bp as live_bp
+    from routes.pwa import bp as pwa_bp
     from routes.student import bp as student_bp
-    for bp in (auth_bp, student_bp, live_bp, admin_bp, dev_bp):
+    for bp in (auth_bp, student_bp, live_bp, admin_bp, dev_bp, pwa_bp, api_bp):
         app.register_blueprint(bp)
 
     tz = ZoneInfo(app.config["TIMEZONE"])
@@ -55,12 +60,24 @@ def create_app():
     @app.before_request
     def guard():
         g.user = None  # so error pages render even if we abort before load_user
+        # App mode: the Google Play app always opens /?source=twa. Inside it we hide prices,
+        # purchase links and code entry (Google Play payments policy); ?source=web switches back.
+        src = request.args.get("source")
+        g.app_cookie = None
+        if src == "twa":
+            g.in_app, g.app_cookie = True, "android"
+        elif src == "web":
+            g.in_app, g.app_cookie = False, ""
+        else:
+            g.in_app = request.cookies.get(APP_COOKIE) == "android"
         if request.endpoint != "static" and is_blocked(client_ip()):
             abort(403, description="تم حظر عنوانك مؤقتاً. إذا هذا خطأ تواصل مع الدعم.")
 
     @app.before_request
     def load_user():
         g.user = None
+        if request.path.startswith("/api/v1/"):
+            return None  # the app API authenticates with a Bearer token only (routes/api.py), never cookies
         uid = session.get("uid")
         if uid:
             user = db.session.get(User, uid)
@@ -75,6 +92,12 @@ def create_app():
 
     @app.after_request
     def security_headers(resp):
+        if g.get("app_cookie") is not None:
+            if g.app_cookie:
+                resp.set_cookie(APP_COOKIE, g.app_cookie, max_age=365 * 86400, httponly=True,
+                                samesite="Lax", secure=app.config["SESSION_COOKIE_SECURE"])
+            else:
+                resp.delete_cookie(APP_COOKIE)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         if app.config["SESSION_COOKIE_SECURE"]:
             resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
@@ -115,6 +138,8 @@ def create_app():
             "plan_includes": c["PLAN_INCLUDES"],
             "telegram_url": f"https://t.me/{tg}" if tg else "",
             "live_now": live,
+            "in_app": bool(g.get("in_app")),
+            "contact_email": c["CONTACT_EMAIL"],
             "KIND_LABELS": KIND_LABELS,
             "KINDS": KINDS,
             "KIND_SINGULAR": KIND_SINGULAR,
@@ -169,6 +194,9 @@ def create_app():
                 elif code == 400:
                     log_event("bad_request", getattr(e, "description", "")[:120], path=request.path)
             desc = getattr(e, "description", None)
+            if request.path.startswith("/api/v1/"):
+                custom = desc if desc and desc != getattr(type(e), "description", None) else default_msg
+                return jsonify(error=custom), code
             # Only show custom (Arabic) descriptions passed to abort(); hide werkzeug's English defaults
             msg = desc if desc and desc != getattr(type(e), "description", None) else default_msg
             return render_template("error.html", code=code, message=msg), code

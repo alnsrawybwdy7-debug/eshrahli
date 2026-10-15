@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f6b5c">
+  <title>ماكو اتصال · {{ site_name }}</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f4f2ec; --ink:#1d2421; --muted:#6b736f; --accent:#0f6b5c; --card:#fff; --line:#e4e1d8; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#121614; --ink:#e9ece9; --muted:#9aa39e; --card:#1b201e; --line:#2a312e; } }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px 16px;
+           background:var(--bg); color:var(--ink);
+           font-family: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; }
+    .box { max-width:420px; width:100%; text-align:center; background:var(--card); border:1px solid var(--line);
+           border-radius:18px; padding:32px 22px; }
+    .mark { width:64px; height:64px; margin:0 auto 14px; border-radius:16px; background:var(--accent);
+            display:grid; place-items:center; }
+    h1 { font-size:1.35rem; margin:0 0 8px; }
+    p { color:var(--muted); line-height:1.8; margin:0 0 20px; }
+    a.btn { display:block; padding:12px 16px; border-radius:12px; background:var(--accent); color:#fff;
+            text-decoration:none; font-weight:600; }
+  </style>
+</head>
+<body>
+  <main class="box">
+    <div class="mark" aria-hidden="true">
+      <svg width="34" height="34" viewBox="0 0 24 24"><path d="M5 3.5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5h-6.2l-4.6 3.6a.6.6 0 0 1-1-.5v-3.1H5A2.5 2.5 0 0 1 2.5 15V6A2.5 2.5 0 0 1 5 3.5z" fill="none" stroke="#fff" stroke-width="1.9" stroke-linejoin="round"/><path d="M10 7.7v5.6c0 .4.4.6.7.4l4.4-2.8a.5.5 0 0 0 0-.8l-4.4-2.8a.45.45 0 0 0-.7.4z" fill="#fff"/></svg>
+    </div>
+    <h1>ماكو اتصال بالإنترنت</h1>
+    <p>تأكد من الواي فاي أو بيانات الهاتف، وبعدين ارجع جرّب.</p>
+    <a class="btn" href="/">إعادة المحاولة</a>
+  </main>
+</body>
+</html>

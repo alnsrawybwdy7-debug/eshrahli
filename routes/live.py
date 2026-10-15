@@ -3,6 +3,7 @@ import secrets
 from flask import Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request, url_for
 
 import livekit_util
+import push
 from models import LiveSession, Subject, db, utcnow
 from security import admin_required, subscription_required
 
@@ -45,6 +46,7 @@ def start():
     s = LiveSession(title=title, subject_id=subject_id, room="live-" + secrets.token_hex(8))
     db.session.add(s)
     db.session.commit()
+    push.notify_live_started(s)
     flash("بدأ البث. كل المشتركين يشوفون زر الانضمام هسه.", "ok")
     return redirect(url_for("live.room"))
 

@@ -7,7 +7,7 @@
     <p class="muted">
       {% if g.user.is_admin %}هذي الواجهة مثل ما يشوفها الطلاب.
       {% elif g.user.all_access %}مشترك بكل المواد · باقي {{ g.user.days_left }} يوم.
-      {% else %}{% set n = g.user.active_subject_ids|length %}مشترك {{ 'بمادة وحدة' if n == 1 else ('بمادتين' if n == 2 else ('بـ ' ~ n ~ (' مواد' if n <= 10 else ' مادة'))) }}. المواد المقفولة تكدر تشترك بيها من <a href="{{ url_for('student.subscribe') }}">صفحة الاشتراك</a>.{% endif %}
+      {% else %}{% set n = g.user.active_subject_ids|length %}مشترك {{ 'بمادة وحدة' if n == 1 else ('بمادتين' if n == 2 else ('بـ ' ~ n ~ (' مواد' if n <= 10 else ' مادة'))) }}. {% if in_app %}المواد المقفولة مو ضمن اشتراكك.{% else %}المواد المقفولة تكدر تشترك بيها من <a href="{{ url_for('student.subscribe') }}">صفحة الاشتراك</a>.{% endif %}{% endif %}
     </p>
   </div>
   {% if g.user.is_admin %}<a class="btn" href="{{ url_for('admin.subjects') }}">إدارة المواد</a>{% endif %}
@@ -30,7 +30,7 @@
       {% for k in KINDS if c.get(k) or k == 'video' %}
       <span class="badge">{{ c.get(k, 0) }} {{ KIND_SINGULAR[k] }}</span>
       {% endfor %}
-      {% if not open %}<span class="badge ok">اشترك بالمادة ←</span>{% endif %}
+      {% if not open and not in_app %}<span class="badge ok">اشترك بالمادة ←</span>{% endif %}
     </div>
   </a>
   {% endfor %}

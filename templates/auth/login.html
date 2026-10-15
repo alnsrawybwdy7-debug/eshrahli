@@ -13,10 +13,12 @@
     <span class="fx-entry-body"><b>ماذا نقدم لكم بالمنصة؟</b><small>شروحات، ملخصات، تقارير، وميت قبل امتحان المد والفاينل</small></span>
     <span class="fx-entry-arrow" aria-hidden="true">←</span>
   </a>
+  {% if not in_app %}
   <div class="price-strip">
     <span>مادة واحدة <b>{{ price_subject|money }}</b> {{ currency }}</span>
     <span>كل المواد <b>{{ price_all|money }}</b> {{ currency }}</span>
   </div>
+  {% endif %}
   <div class="card">
     <form method="post">
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">

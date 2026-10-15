@@ -25,10 +25,19 @@
   {% else %}
   <div class="auth-head">
     <div class="brand-mark">{{ logo() }}</div>
-    <h1>{{ 'اشتراكك منتهي' if g.user.sub_status == 'expired' else 'فعّل اشتراكك' }}</h1>
-    <p class="muted">اشترك بمادة وحدة أو بكل المواد، وتفتحلك الشروحات والملخصات والواجبات.</p>
+    <h1>{{ 'اشتراكك منتهي' if g.user.sub_status == 'expired' else ('اشتراكك غير مفعّل' if in_app else 'فعّل اشتراكك') }}</h1>
+    <p class="muted">{{ 'حسابك ما بيه اشتراك فعّال حالياً.' if in_app else 'اشترك بمادة وحدة أو بكل المواد، وتفتحلك الشروحات والملخصات والواجبات.' }}</p>
   </div>
   {% endif %}
+
+  {% if in_app %}
+  {# Google Play app: consumption only — no prices, purchase links or code entry inside the app #}
+  <div class="card app-note">
+    <h2>تفعيل الاشتراك</h2>
+    <p>تفعيل الاشتراك أو تجديده ما يصير من داخل التطبيق. يصير من موقع {{ site_name }} على المتصفح، وبعدها المواد تنفتح هنا بالتطبيق تلقائياً بنفس حسابك.</p>
+    {% if g.user.has_active_sub %}<a class="btn btn-primary btn-block" href="{{ url_for('student.home') }}">رجوع للمواد</a>{% endif %}
+  </div>
+  {% else %}
 
   <h2>1. اختار اشتراكك وراسلنا</h2>
   <p class="muted">اضغط على الاشتراك اللي تريده، تنفتح محادثة تيليكرام برسالة جاهزة بيها اسم المستخدم مالك: <span class="ltr">{{ g.user.username }}</span></p>
@@ -49,5 +58,6 @@
       <button class="btn btn-primary btn-block" type="submit">تفعيل</button>
     </form>
   </div>
+  {% endif %}
 </div>
 {% endblock %}

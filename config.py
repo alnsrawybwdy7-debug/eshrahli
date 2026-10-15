@@ -62,7 +62,14 @@ class Config:
         "PLAN_INCLUDES", "شروحات|ملخصات|تقارير|ميت قبل امتحان المد والفاينل").split("|") if x.strip()]
     CONTACT_WHATSAPP = os.getenv("CONTACT_WHATSAPP", "").strip()  # e.g. 9647800000000 (optional)
     CONTACT_TELEGRAM = os.getenv("CONTACT_TELEGRAM", "nomiya_0").strip().lstrip("@")  # username
+    CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "").strip()  # shown on the privacy page (optional)
     TIMEZONE = os.getenv("TIMEZONE", "Asia/Baghdad")
+
+    # Android app on Google Play (Trusted Web Activity). The app opens /?source=twa, which turns on
+    # "app mode": no prices, purchase links or code entry inside the app (Google Play payments policy).
+    ANDROID_PACKAGE = os.getenv("ANDROID_PACKAGE", "study.eshrahli.app").strip()
+    # SHA-256 fingerprints of the app signing keys, comma-separated (upload key + Play app signing key)
+    ANDROID_SHA256 = os.getenv("ANDROID_SHA256", "").strip()
     # Student logging in on a new device logs out the old one (anti account-sharing)
     SINGLE_DEVICE = _flag("SINGLE_DEVICE", "1")
 
@@ -77,6 +84,12 @@ class Config:
     R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
     R2_BUCKET = os.getenv("R2_BUCKET", "")
     MEDIA_URL_TTL = int(os.getenv("MEDIA_URL_TTL", "10800"))  # seconds
+
+    # Mobile app notifications (Firebase Cloud Messaging). Path to the service-account JSON from
+    # Firebase console → Project settings → Service accounts → Generate new private key. Empty = off.
+    FCM_SERVICE_ACCOUNT = os.getenv("FCM_SERVICE_ACCOUNT", "")
+    # 1 = send in a background thread (the teacher's page doesn't wait). 0 = send inline.
+    PUSH_BACKGROUND = _flag("PUSH_BACKGROUND", "1")
     # Check with R2 that an upload really arrived. Set 0 on hosts that block outbound
     # traffic (PythonAnywhere free plan); it also falls back automatically if R2 is unreachable.
     VERIFY_UPLOADS = _flag("VERIFY_UPLOADS", "1")
