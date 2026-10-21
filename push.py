@@ -70,6 +70,9 @@ def _send_one(project_id, access, token, title, body, data):
         "data": {k: str(v) for k, v in data.items()},
         "android": {"priority": "high", "notification": {
             "channel_id": CHANNEL_ID, "icon": "ic_stat_eshrahli", "color": "#0F6B5C", "sound": "default"}},
+        # iPhones (APNs key is in Firebase); Android ignores this block
+        "apns": {"headers": {"apns-priority": "10", "apns-push-type": "alert"},
+                 "payload": {"aps": {"sound": "default"}}},
     }}
     req = urllib.request.Request(
         f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send",

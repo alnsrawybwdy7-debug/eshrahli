@@ -58,9 +58,9 @@ def firebase(app, service_account, monkeypatch):
     return fake
 
 
-def register(client, username, token):
+def register(client, username, token, platform="android"):
     t = api_login(client, username)
-    r = client.post("/api/v1/push/register", headers=bearer(t), json={"token": token, "platform": "android"})
+    r = client.post("/api/v1/push/register", headers=bearer(t), json={"token": token, "platform": platform})
     assert r.status_code == 200, r.get_json()
     return t
 
@@ -180,6 +180,32 @@ def test_new_content_notifies_subject_subscribers(app, firebase):
     msg = firebase.sent[0]
     assert msg["notification"]["title"] == "ملخص جديد · كيمياء" and msg["notification"]["body"] == "ملخص الفصل"
     assert msg["data"] == {"type": "content", "subject_id": str(sid), "content_id": str(r.get_json()["id"])}
+
+
+def test_messages_carry_android_and_ios_sound_settings(app, firebase):
+    with app.app_context():
+        s = make_subject()
+        make_user("ali", all_days=5)
+        make_user("sara", name="سارة", all_days=5)
+        c = Content(subject_id=s.id, kind="summary", title="ملخص", filename="a.pdf",
+                    storage_key=f"subjects/{s.id}/summary/{'ef' * 16}.pdf")
+        live = LiveSession(title="x", room="live-ios")
+        db.session.add_all([c, live])
+        db.session.commit()
+        live_id, content_id = live.id, c.id
+    register(app.test_client(), "ali", GOOD, platform="android")
+    register(app.test_client(), "sara", DEAD, platform="ios")
+    with app.app_context():
+        assert {d.platform for d in PushDevice.query.all()} == {"android", "ios"}
+        live, c = db.session.get(LiveSession, live_id), db.session.get(Content, content_id)
+        assert push.notify_live_started(live) == 2
+        assert push.notify_new_content(c) == 2
+    assert sorted(m["data"]["type"] for m in firebase.sent) == ["content", "content", "live", "live"]
+    for msg in firebase.sent:
+        assert msg["android"]["notification"]["channel_id"] == "eshrahli_default"
+        assert msg["apns"]["payload"]["aps"]["sound"] == "default"
+        assert msg["apns"]["headers"]["apns-push-type"] == "alert"
+        assert msg["apns"]["headers"]["apns-priority"] == "10"
 
 
 def test_hidden_content_is_not_announced(app, firebase):
