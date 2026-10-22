@@ -31,7 +31,7 @@
      data-is-admin="{{ '1' if g.user.is_admin else '0' }}"
      data-me="u{{ g.user.id }}"
      data-home-url="{{ url_for('student.home') }}"
-     {% if g.user.is_admin %}data-mute-url="{{ url_for('live.mute', session_id=s.id, identity='IDENT') }}"
+     {% if g.user.is_admin %}data-admin-token-url="{{ url_for('live.admin_token', session_id=s.id) }}"
      data-kick-url="{{ url_for('live.kick', session_id=s.id, identity='IDENT') }}"{% endif %}>
   <div class="page-head">
     <div>
@@ -40,7 +40,7 @@
       <p class="muted small">بدأ {{ s.started_at|local('%I:%M %p') }}</p>
     </div>
     {% if g.user.is_admin %}
-    <form method="post" action="{{ url_for('live.end') }}" data-confirm="متأكد تريد تنهي البث لكل المشتركين؟">
+    <form id="end-form" method="post" action="{{ url_for('live.end') }}" data-confirm="متأكد تريد تنهي البث لكل المشتركين؟">
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <button class="btn btn-danger" type="submit">إنهاء البث</button>
     </form>

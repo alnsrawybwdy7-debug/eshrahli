@@ -1,68 +1,33 @@
-"""Teacher moderation of a live session (mute / kick) against a fake LiveKit server. No network is used."""
-import io
-import json
+"""Teacher moderation of a live session. The server never connects to LiveKit (PythonAnywhere blocks it):
+it only signs short tokens and records kicks; the teacher's browser sends the LiveKit commands."""
+import time
+import urllib.request
 
 import jwt
 import pytest
 
-import livekit_util
 from conftest import api_login, bearer, make_user, web_csrf, web_login
 from models import LiveKick, LiveSession, User, db
 
-LK_URL = "wss://demo.livekit.cloud"
 SECRET = "s" * 32
-
-
-class FakeLiveKit:
-    """Stands in for urllib.request.urlopen inside livekit_util.py."""
-
-    def __init__(self, participants=()):
-        self.participants = {p["identity"]: p for p in participants}
-        self.calls = []
-
-    def __call__(self, req, timeout=None):
-        prefix = "https://demo.livekit.cloud/twirp/livekit.RoomService/"
-        assert req.full_url.startswith(prefix)
-        method = req.full_url[len(prefix):]
-        claims = jwt.decode(req.headers["Authorization"].split()[1], SECRET, algorithms=["HS256"])
-        body = json.loads(req.data)
-        self.calls.append((method, body, claims["video"]))
-        if method != "DeleteRoom":
-            assert claims["video"] == {"roomAdmin": True, "room": body["room"]}
-        if method == "ListParticipants":
-            return io.BytesIO(json.dumps({"participants": list(self.participants.values())}).encode())
-        if method == "GetParticipant":
-            return io.BytesIO(json.dumps(self.participants[body["identity"]]).encode())
-        return io.BytesIO(b"{}")
-
-
-def student(uid, name, tracks):
-    return {"identity": f"u{uid}", "name": name, "metadata": json.dumps({"role": "student"}), "tracks": tracks}
 
 
 @pytest.fixture()
 def live(app, monkeypatch):
-    """A running live session, LiveKit configured, students ali (in the room, mic on) and sara."""
-    app.config.update(LIVEKIT_URL=LK_URL, LIVEKIT_API_KEY="k", LIVEKIT_API_SECRET=SECRET)
+    """A running live session, LiveKit configured, students ali and sara. Any network call fails the test."""
+    app.config.update(LIVEKIT_URL="wss://demo.livekit.cloud", LIVEKIT_API_KEY="k", LIVEKIT_API_SECRET=SECRET)
+
+    def no_network(*a, **k):
+        raise AssertionError("the server must not connect to LiveKit")
+    monkeypatch.setattr(urllib.request, "urlopen", no_network)
     with app.app_context():
         ali = make_user("ali", all_days=5)
         sara = make_user("sara", name="سارة", all_days=5)
         s = LiveSession(title="مراجعة", room="live-mod")
         db.session.add(s)
         db.session.commit()
-        ids = {"ali": ali.id, "sara": sara.id, "session": s.id,
-               "teacher": User.query.filter_by(username="teacher").one().id}
-    fake = FakeLiveKit([
-        {"identity": f"u{ids['teacher']}", "name": "المدرّسة", "metadata": json.dumps({"role": "teacher"}),
-         "tracks": [{"sid": "TR_t1", "source": "CAMERA", "type": "VIDEO"}]},
-        # Twirp JSON leaves out zero enum values: type AUDIO (0) is missing here on purpose
-        student(ids["ali"], "علي", [{"sid": "TR_a1", "source": "MICROPHONE"},
-                                    {"sid": "TR_a2", "source": 1, "type": 1, "muted": True},
-                                    {"sid": "TR_a3", "type": "DATA"}]),
-    ])
-    monkeypatch.setattr(livekit_util.urllib.request, "urlopen", fake)
-    ids["fake"] = fake
-    return ids
+        return {"ali": ali.id, "sara": sara.id, "session": s.id,
+                "teacher": User.query.filter_by(username="teacher").one().id}
 
 
 def admin_client(app):
@@ -77,63 +42,75 @@ def student_client(app, username="ali"):
     return c
 
 
-def post(c, url):
-    return c.post(url, headers={"X-CSRF-Token": web_csrf(c, "/account")})
+def post(c, url, **headers):
+    return c.post(url, headers={"X-CSRF-Token": web_csrf(c, "/account"), **headers})
 
 
-def test_students_cannot_moderate(app, live):
-    sid, target = live["session"], f"u{live['sara']}"
-    c = student_client(app)
-    assert c.get(f"/live/{sid}/participants").status_code == 403
-    assert post(c, f"/live/{sid}/mute/{target}").status_code == 403
-    assert post(c, f"/live/{sid}/kick/{target}").status_code == 403
-    assert app.test_client().get(f"/live/{sid}/participants").status_code == 401
-    assert live["fake"].calls == []
-    with app.app_context():
-        assert LiveKick.query.count() == 0
+def anon_post(app, url):
+    c = app.test_client()
+    return c.post(url, headers={"X-CSRF-Token": web_csrf(c, "/login")})
 
 
-def test_moderation_needs_csrf(app, live):
-    c = admin_client(app)
-    r = c.post(f"/live/{live['session']}/kick/u{live['ali']}", headers={"X-CSRF-Token": "wrong"})
-    assert r.status_code == 400
-    with app.app_context():
-        assert LiveKick.query.count() == 0
+def decode(token):
+    return jwt.decode(token, SECRET, algorithms=["HS256"])
 
 
-def test_admin_lists_participants(app, live):
-    r = admin_client(app).get(f"/live/{live['session']}/participants")
+# ---------------- admin token ----------------
+def test_admin_token_is_room_admin_for_this_room_only(app, live):
+    r = post(admin_client(app), f"/live/{live['session']}/admin-token")
     assert r.status_code == 200
-    people = {p["identity"]: p for p in r.get_json()["participants"]}
-    assert people[f"u{live['teacher']}"]["is_teacher"] is True
-    assert people[f"u{live['ali']}"] == {"identity": f"u{live['ali']}", "name": "علي", "is_teacher": False,
-                                         "mic": True, "camera": False, "screen": False}
+    d = r.get_json()
+    assert d["url"] == "https://demo.livekit.cloud" and d["room"] == "live-mod" and d["expires_in"] == 600
+    claims = decode(d["token"])
+    assert claims["video"] == {"roomAdmin": True, "room": "live-mod"}
+    assert claims["iss"] == "k" and 590 <= claims["exp"] - time.time() <= 600
 
 
-def test_admin_mutes_published_tracks(app, live):
-    r = post(admin_client(app), f"/live/{live['session']}/mute/u{live['ali']}")
-    assert r.status_code == 200 and r.get_json() == {"ok": True, "muted": 1}
-    mutes = [c[1] for c in live["fake"].calls if c[0] == "MutePublishedTrack"]
-    # only the live mic: the camera is already muted and data tracks are skipped
-    assert mutes == [{"room": "live-mod", "identity": f"u{live['ali']}", "track_sid": "TR_a1", "muted": True}]
+def test_only_admins_get_the_admin_token(app, live):
+    url = f"/live/{live['session']}/admin-token"
+    assert post(student_client(app), url).status_code == 403
+    assert anon_post(app, url).status_code == 401
+    assert admin_client(app).post(url, headers={"X-CSRF-Token": "wrong"}).status_code == 400
 
 
-def test_admin_cannot_target_teacher_or_bad_identity(app, live):
+def test_admin_token_needs_running_session_and_livekit(app, live):
+    admin = admin_client(app)
+    app.config["LIVEKIT_URL"] = ""
+    assert post(admin, f"/live/{live['session']}/admin-token").status_code == 503
+    app.config["LIVEKIT_URL"] = "wss://demo.livekit.cloud"
+    admin.post("/live/end", data={"_csrf": web_csrf(admin, "/live/")})
+    assert post(admin, f"/live/{live['session']}/admin-token").status_code == 404
+
+
+# ---------------- kick ----------------
+def test_students_cannot_kick(app, live):
+    url = f"/live/{live['session']}/kick/u{live['sara']}"
+    assert post(student_client(app), url).status_code == 403
+    assert anon_post(app, url).status_code == 401
+    assert admin_client(app).post(url, headers={"X-CSRF-Token": "wrong"}).status_code == 400
+    with app.app_context():
+        assert LiveKick.query.count() == 0
+
+
+def test_admin_cannot_kick_teacher_or_bad_identity(app, live):
     c = admin_client(app)
     assert post(c, f"/live/{live['session']}/kick/u{live['teacher']}").status_code == 400
-    assert post(c, f"/live/{live['session']}/mute/u999999").status_code == 404
-    assert post(c, f"/live/{live['session']}/mute/ali").status_code == 404
-    assert live["fake"].calls == []
+    assert post(c, f"/live/{live['session']}/kick/u999999").status_code == 404
+    assert post(c, f"/live/{live['session']}/kick/ali").status_code == 404
+    with app.app_context():
+        assert LiveKick.query.count() == 0
 
 
-def test_kicked_student_cannot_rejoin_until_next_live(app, live):
+def test_kick_is_recorded_without_network_and_blocks_rejoining(app, live):
     sid, ali = live["session"], live["ali"]
     web = student_client(app)
     assert post(web, "/live/token").status_code == 200
 
     r = post(admin_client(app), f"/live/{sid}/kick/u{ali}")
-    assert r.status_code == 200 and r.get_json() == {"ok": True, "removed": True}
-    assert ("RemoveParticipant", {"room": "live-mod", "identity": f"u{ali}"}) in [c[:2] for c in live["fake"].calls]
+    assert r.status_code == 200 and r.get_json() == {"ok": True}
+    assert post(admin_client(app), f"/live/{sid}/kick/u{ali}").status_code == 200  # twice is fine
+    with app.app_context():
+        assert LiveKick.query.count() == 1
 
     # Website: refused with a clear Arabic message
     r = post(web, "/live/token")
@@ -156,17 +133,29 @@ def test_kicked_student_cannot_rejoin_until_next_live(app, live):
     assert r.status_code == 200 and r.get_json()["title"] == "بث جديد"
 
 
-def test_kick_is_saved_even_if_student_already_left(app, live, monkeypatch):
-    def gone(req, timeout=None):
-        raise OSError("twirp error not_found: participant not found")
-    monkeypatch.setattr(livekit_util.urllib.request, "urlopen", gone)
-    r = post(admin_client(app), f"/live/{live['session']}/kick/u{live['sara']}")
-    assert r.status_code == 200 and r.get_json()["removed"] is False
-    assert post(student_client(app, "sara"), "/live/token").status_code == 403
-
-
 def test_ended_session_cannot_be_moderated(app, live):
     admin = admin_client(app)
     admin.post("/live/end", data={"_csrf": web_csrf(admin, "/live/")})
-    assert admin.get(f"/live/{live['session']}/participants").status_code == 404
     assert post(admin, f"/live/{live['session']}/kick/u{live['ali']}").status_code == 404
+
+
+# ---------------- ending ----------------
+def test_end_without_network_gives_browser_a_delete_token(app, live):
+    admin = admin_client(app)
+    r = post(admin, "/live/end", Accept="application/json")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["ok"] is True and d["redirect"] == "/admin/"
+    assert d["livekit"]["url"] == "https://demo.livekit.cloud" and d["livekit"]["room"] == "live-mod"
+    claims = decode(d["livekit"]["token"])
+    assert claims["video"] == {"roomCreate": True} and claims["exp"] - time.time() <= 60
+    with app.app_context():
+        assert db.session.get(LiveSession, live["session"]).ended_at is not None
+    # Nothing left to end: no token
+    assert post(admin, "/live/end", Accept="application/json").get_json()["livekit"] is None
+
+
+def test_plain_form_end_still_redirects(app, live):
+    admin = admin_client(app)
+    r = admin.post("/live/end", data={"_csrf": web_csrf(admin, "/live/")})
+    assert r.status_code in (302, 303) and r.headers["Location"].endswith("/admin/")

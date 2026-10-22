@@ -1,4 +1,3 @@
-import json
 import re
 import secrets
 from functools import wraps
@@ -49,8 +48,7 @@ def start():
     if subject_id and not db.session.get(Subject, subject_id):
         subject_id = None
     for old in LiveSession.query.filter(LiveSession.ended_at.is_(None)).all():
-        old.ended_at = utcnow()
-        livekit_util.close_room(old.room)
+        old.ended_at = utcnow()  # its students see "ended" on their next status check
     s = LiveSession(title=title, subject_id=subject_id, room="live-" + secrets.token_hex(8))
     db.session.add(s)
     db.session.commit()
@@ -62,16 +60,25 @@ def start():
 @bp.route("/end", methods=["POST"])
 @admin_required
 def end():
+    """Marks the session ended. The server cannot reach LiveKit, so the live page (fetch, Accept: JSON)
+    gets a one-minute token and deletes the room from the teacher's browser."""
     s = LiveSession.current()
+    room = None
     if s:
         s.ended_at = utcnow()
         db.session.commit()
-        livekit_util.close_room(s.room)
+        room = s.room
         flash("تم إنهاء البث.", "ok")
+    if request.accept_mimetypes.best == "application/json":
+        lk = None
+        if room and livekit_util.configured() and livekit_util.https_url():
+            lk = {"url": livekit_util.https_url(), "room": room, "token": livekit_util.delete_room_token()}
+        return jsonify(ok=True, redirect=url_for("admin.dashboard"), livekit=lk)
     return redirect(url_for("admin.dashboard"))
 
 
-# ---------------- teacher moderation (JSON, called from the live page with the CSRF header) ----------------
+# ---------------- teacher moderation ----------------
+# The teacher's browser sends mute / remove to LiveKit itself with the admin token from here.
 def admin_json(view):
     @wraps(view)
     def wrapped(*a, **kw):
@@ -88,76 +95,33 @@ def _running(session_id):
     return s if s and s.ended_at is None else None
 
 
-def _role(metadata):
-    try:
-        return json.loads(metadata or "{}").get("role", "student")
-    except (ValueError, AttributeError):
-        return "student"
-
-
-@bp.route("/<int:session_id>/participants")
+@bp.route("/<int:session_id>/admin-token", methods=["POST"])
 @admin_json
-def participants(session_id):
+def admin_token(session_id):
     s = _running(session_id)
     if not s:
         return jsonify(error="هذا البث منتهي."), 404
-    if not livekit_util.configured():
+    if not livekit_util.configured() or not livekit_util.https_url():
         return jsonify(error="البث غير مضبوط بالسيرفر (LiveKit)."), 503
-    try:
-        people = livekit_util.list_participants(s.room)
-    except Exception as e:
-        current_app.logger.warning("LiveKit ListParticipants failed: %s", e)
-        return jsonify(error="ما كدرنا نجيب قائمة الحاضرين من LiveKit."), 502
-    return jsonify(participants=[{"identity": p["identity"], "name": p["name"],
-                                  "is_teacher": _role(p["metadata"]) == "teacher",
-                                  "mic": p["mic"], "camera": p["camera"], "screen": p["screen"]} for p in people])
-
-
-def _target(session_id, identity):
-    """(session, student) or an error response."""
-    s = _running(session_id)
-    if not s:
-        return None, (jsonify(error="هذا البث منتهي."), 404)
-    m = IDENTITY_RE.match(identity)
-    user = db.session.get(User, int(m.group(1))) if m else None
-    if not user:
-        return None, (jsonify(error="المشارك غير موجود."), 404)
-    if user.is_admin:
-        return None, (jsonify(error="ما تكدرين تكتمين أو تطلعين الأستاذة/الأدمن."), 400)
-    if not livekit_util.configured():
-        return None, (jsonify(error="البث غير مضبوط بالسيرفر (LiveKit)."), 503)
-    return (s, user), None
-
-
-@bp.route("/<int:session_id>/mute/<identity>", methods=["POST"])
-@admin_json
-def mute(session_id, identity):
-    target, error = _target(session_id, identity)
-    if error:
-        return error
-    s, _ = target
-    try:
-        n = livekit_util.mute_participant(s.room, identity)
-    except Exception as e:
-        current_app.logger.warning("LiveKit mute failed: %s", e)
-        return jsonify(error="ما كدرنا نكتم الطالب. يمكن طلع من البث."), 502
-    return jsonify(ok=True, muted=n)
+    return jsonify(token=livekit_util.admin_token(s.room), url=livekit_util.https_url(), room=s.room,
+                   expires_in=livekit_util.ADMIN_TOKEN_TTL)
 
 
 @bp.route("/<int:session_id>/kick/<identity>", methods=["POST"])
 @admin_json
 def kick(session_id, identity):
-    target, error = _target(session_id, identity)
-    if error:
-        return error
-    s, user = target
+    """Only records the kick (the browser then removes them from the room): the token endpoints
+    of the website and the app refuse this student until the session ends."""
+    s = _running(session_id)
+    if not s:
+        return jsonify(error="هذا البث منتهي."), 404
+    m = IDENTITY_RE.match(identity)
+    user = db.session.get(User, int(m.group(1))) if m else None
+    if not user:
+        return jsonify(error="المشارك غير موجود."), 404
+    if user.is_admin:
+        return jsonify(error="ما تكدرين تطلعين الأستاذة/الأدمن."), 400
     if not LiveKick.exists(s, user):
         db.session.add(LiveKick(session_id=s.id, user_id=user.id))
         db.session.commit()
-    try:
-        livekit_util.remove_participant(s.room, identity)
-        removed = True
-    except Exception as e:  # e.g. already left: the kick is saved anyway, so they cannot come back
-        current_app.logger.info("LiveKit RemoveParticipant: %s", e)
-        removed = False
-    return jsonify(ok=True, removed=removed)
+    return jsonify(ok=True)

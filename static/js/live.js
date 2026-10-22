@@ -29,19 +29,95 @@
   }
 
   // ---------- Teacher moderation ----------
-  function moderate(urlTemplate, identity, btn) {
-    btn.disabled = true;
-    return fetch(urlTemplate.replace("IDENT", encodeURIComponent(identity)), {
-      method: "POST", credentials: "same-origin", headers: { "X-CSRF-Token": window.CSRF }
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (d) {
-        if (!r.ok) throw new Error(d.error || "صار خطأ، جرّبي مرة ثانية.");
-        return d;
+  // The server cannot reach LiveKit, so this page sends the RoomService (Twirp) commands itself,
+  // with a short roomAdmin token from the server (renewed a minute before it expires).
+  var adminTok = null; // {token, url, room, until}
+
+  async function serverPost(url) {
+    var r = await fetch(url, { method: "POST", credentials: "same-origin",
+                               headers: { "X-CSRF-Token": window.CSRF, "Accept": "application/json" } });
+    var d = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(d.error || ("السيرفر رجّع خطأ " + r.status));
+    return d;
+  }
+
+  async function getAdminToken() {
+    if (adminTok && adminTok.until - Date.now() > 60000) return adminTok;
+    var d = await serverPost(root.dataset.adminTokenUrl);
+    adminTok = { token: d.token, url: d.url, room: d.room, until: Date.now() + d.expires_in * 1000 };
+    return adminTok;
+  }
+
+  async function twirp(lk, method, body) {
+    var res;
+    try {
+      res = await fetch(lk.url + "/twirp/livekit.RoomService/" + method, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + lk.token, "Content-Type": "application/json" },
+        body: JSON.stringify(body)
       });
-    }).catch(function (err) {
+    } catch (err) {
+      console.error("LiveKit " + method + ": network error", err);
+      throw new Error("ما وصلنا لـ LiveKit (" + method + "): " + (err && err.message ? err.message : err));
+    }
+    var text = await res.text();
+    if (!res.ok) {
+      console.error("LiveKit " + method + " failed: " + res.status + " " + text);
+      var msg = text;
+      try { msg = JSON.parse(text).msg || text; } catch (e) {}
+      var e2 = new Error("LiveKit رفض " + method + " (" + res.status + "): " + msg);
+      e2.status = res.status; e2.body = text;
+      throw e2;
+    }
+    return text ? JSON.parse(text) : {};
+  }
+
+  function busy(btn, work) {
+    btn.disabled = true;
+    return work().catch(function (err) {
       alert(err && err.message ? err.message : String(err));
     }).finally(function () { btn.disabled = false; });
   }
+
+  async function muteStudent(p) {
+    var lk = await getAdminToken();
+    var pubs = Array.from(p.trackPublications.values()).filter(function (pub) {
+      return (pub.kind === Track.Kind.Audio || pub.kind === Track.Kind.Video) && !pub.isMuted && pub.trackSid;
+    });
+    if (!pubs.length) { alert(displayName(p) + ": المايك والكاميرا مطفيات أصلاً."); return; }
+    for (var i = 0; i < pubs.length; i++) {
+      await twirp(lk, "MutePublishedTrack", { room: lk.room, identity: p.identity, track_sid: pubs[i].trackSid, muted: true });
+    }
+  }
+
+  async function kickStudent(p) {
+    await serverPost(root.dataset.kickUrl.replace("IDENT", encodeURIComponent(p.identity))); // blocks rejoining
+    var lk = await getAdminToken();
+    try {
+      await twirp(lk, "RemoveParticipant", { room: lk.room, identity: p.identity });
+    } catch (err) {
+      if (err.status !== 404) throw new Error(err.message + "\nالطرد انسجّل، فما يكدر يرجع للبث.");
+    }
+  }
+
+  // Ending: the server marks the session ended, then this browser deletes the room on LiveKit
+  var endForm = $("end-form");
+  if (endForm) endForm.addEventListener("submit", function (e) {
+    if (e.defaultPrevented) return; // the confirm dialog was cancelled
+    e.preventDefault();
+    var btn = endForm.querySelector("button");
+    btn.disabled = true;
+    serverPost(endForm.action).then(async function (d) {
+      if (d.livekit) {
+        try { await twirp(d.livekit, "DeleteRoom", { room: d.livekit.room }); }
+        catch (err) { if (err.status !== 404) alert(err.message + "\nالبث انتهى بالموقع، والطلاب يطلعون خلال ثواني."); }
+      }
+      location.href = d.redirect;
+    }).catch(function (err) {
+      btn.disabled = false;
+      alert(err && err.message ? err.message : String(err));
+    });
+  });
 
   function modButton(text, danger, onClick) {
     var b = document.createElement("button");
@@ -159,14 +235,15 @@
         row.appendChild(m);
       }
       if (isAdmin && !p.isLocal && roleOf(p) !== "teacher") {
-        var identity = p.identity, name = displayName(p);
-        row.appendChild(modButton("كتم", false, function () {
-          moderate(root.dataset.muteUrl, identity, this);
-        }));
-        row.appendChild(modButton("طرد", true, function () {
-          if (!confirm("متأكدة تريدين تطلعين " + name + " من البث؟ ما يكدر يرجع لهذا البث.")) return;
-          moderate(root.dataset.kickUrl, identity, this);
-        }));
+        (function (p) {
+          row.appendChild(modButton("كتم", false, function () {
+            busy(this, function () { return muteStudent(p); });
+          }));
+          row.appendChild(modButton("طرد", true, function () {
+            if (!confirm("متأكدة تريدين تطلعين " + displayName(p) + " من البث؟ ما يكدر يرجع لهذا البث.")) return;
+            busy(this, function () { return kickStudent(p); });
+          }));
+        })(p);
       }
       peopleEl.appendChild(row);
     });
@@ -289,6 +366,7 @@
       if (isAdmin) teacherPlaceholder(room.localParticipant);
       refreshButtons(); renderPeople();
       statusTimer = setInterval(pollStatus, 15000);
+      if (isAdmin) getAdminToken().catch(function (err) { console.error("admin token:", err); });
     } catch (err) {
       btn.disabled = false; btn.textContent = "انضمام للاتصال";
       showError(err && err.message ? err.message : String(err));

@@ -1,7 +1,10 @@
-"""LiveKit helpers: access tokens are plain HS256 JWTs, so no extra SDK is needed."""
+"""LiveKit helpers: access tokens are plain HS256 JWTs, so no extra SDK is needed.
+
+The server never connects to LiveKit (PythonAnywhere's free plan blocks it): it only signs tokens.
+Room commands (mute, remove, delete room) are sent by the teacher's browser with the tokens below.
+"""
 import json
 import time
-import urllib.request
 
 import jwt
 from flask import current_app
@@ -41,73 +44,28 @@ def join_token(identity, name, room, is_admin, ttl=6 * 3600):
     return _sign(claims)
 
 
-def _room_service(method, payload, grants, timeout=5):
-    """Call LiveKit's RoomService (Twirp, JSON) with a short-lived server token. Raises on any failure."""
+def https_url():
+    """LIVEKIT_URL as the https:// base of LiveKit's RoomService (Twirp) API, for the browser."""
+    url = current_app.config["LIVEKIT_URL"].rstrip("/")
+    return "https://" + url.split("://", 1)[1] if url.startswith(("wss://", "https://")) else ""
+
+
+def _server_token(grants, ttl):
     c = current_app.config
-    base = c["LIVEKIT_URL"].replace("wss://", "https://").replace("ws://", "http://").rstrip("/")
-    if not base.startswith("https://"):
-        raise ValueError("LIVEKIT_URL must be wss:// or https://")
     now = int(time.time())
-    token = _sign({"iss": c["LIVEKIT_API_KEY"], "sub": "server", "nbf": now - 10, "exp": now + 60,
-                   "video": grants})
-    req = urllib.request.Request(
-        f"{base}/twirp/livekit.RoomService/{method}",
-        data=json.dumps(payload).encode(),
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        method="POST",
-    )
-    raw = urllib.request.urlopen(req, timeout=timeout).read()
-    return json.loads(raw or b"{}")
+    return _sign({"iss": c["LIVEKIT_API_KEY"], "sub": "teacher-admin", "nbf": now - 10, "exp": now + ttl,
+                  "video": grants})
 
 
-def close_room(room):
-    """Best-effort: delete the room on LiveKit so everyone is disconnected immediately."""
-    if not configured():
-        return
-    try:
-        _room_service("DeleteRoom", {"room": room}, {"roomCreate": True})
-    except Exception as e:
-        current_app.logger.info("LiveKit DeleteRoom skipped: %s", e)
+ADMIN_TOKEN_TTL = 600
 
 
-def _admin(room):
-    return {"roomAdmin": True, "room": room}
+def admin_token(room, ttl=ADMIN_TOKEN_TTL):
+    """roomAdmin for this one room only: list, mute and remove participants. Made locally, no network."""
+    return _server_token({"roomAdmin": True, "room": room}, ttl)
 
 
-# Twirp JSON may send enums as names or numbers, and leaves out zero values (AUDIO=0, UNKNOWN=0)
-def _is_data(track):
-    return track.get("type") in ("DATA", 2)
-
-
-def _source(track):
-    return {1: "CAMERA", 2: "MICROPHONE", 3: "SCREEN_SHARE", 4: "SCREEN_SHARE_AUDIO"}.get(
-        track.get("source"), track.get("source") or "UNKNOWN")
-
-
-def list_participants(room):
-    """Everyone in the room right now: identity, name, metadata and which tracks are live (not muted)."""
-    data = _room_service("ListParticipants", {"room": room}, _admin(room))
-    out = []
-    for p in data.get("participants", []):
-        live = {_source(t) for t in p.get("tracks", []) if not _is_data(t) and not t.get("muted")}
-        out.append({"identity": p.get("identity", ""), "name": p.get("name", ""), "metadata": p.get("metadata", ""),
-                    "mic": "MICROPHONE" in live, "camera": "CAMERA" in live,
-                    "screen": bool(live & {"SCREEN_SHARE", "SCREEN_SHARE_AUDIO"})})
-    return out
-
-
-def mute_participant(room, identity):
-    """Mute every audio/video track this participant publishes. Returns how many were muted."""
-    p = _room_service("GetParticipant", {"room": room, "identity": identity}, _admin(room))
-    n = 0
-    for t in p.get("tracks", []):
-        if _is_data(t) or t.get("muted") or not t.get("sid"):
-            continue
-        _room_service("MutePublishedTrack", {"room": room, "identity": identity, "track_sid": t["sid"],
-                                             "muted": True}, _admin(room))
-        n += 1
-    return n
-
-
-def remove_participant(room, identity):
-    _room_service("RemoveParticipant", {"room": room, "identity": identity}, _admin(room))
+def delete_room_token(ttl=60):
+    """LiveKit's DeleteRoom needs the roomCreate grant (it cannot be limited to one room), so this token
+    is only handed out by /live/end, right when the session ends, and lives one minute."""
+    return _server_token({"roomCreate": True}, ttl)
