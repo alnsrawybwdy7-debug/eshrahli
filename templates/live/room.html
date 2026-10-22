@@ -29,7 +29,10 @@
      data-status-url="{{ url_for('student.live_status') }}"
      data-session-id="{{ s.id }}"
      data-is-admin="{{ '1' if g.user.is_admin else '0' }}"
-     data-me="u{{ g.user.id }}">
+     data-me="u{{ g.user.id }}"
+     data-home-url="{{ url_for('student.home') }}"
+     {% if g.user.is_admin %}data-mute-url="{{ url_for('live.mute', session_id=s.id, identity='IDENT') }}"
+     data-kick-url="{{ url_for('live.kick', session_id=s.id, identity='IDENT') }}"{% endif %}>
   <div class="page-head">
     <div>
       <div class="row"><span class="badge live"><span class="pulse"></span> مباشر</span>{% if s.subject %}<span class="badge">{{ s.subject.name }}</span>{% endif %}</div>

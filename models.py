@@ -206,6 +206,22 @@ class LiveSession(db.Model):
         return s if user.can_access(s.subject_id) else None
 
 
+class LiveKick(db.Model):
+    """A student the teacher removed from one live session. They cannot rejoin that session;
+    the next session is a new row in live_sessions, so the kick ends with the session."""
+    __tablename__ = "live_kicks"
+    __table_args__ = (db.UniqueConstraint("session_id", "user_id"),)
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("live_sessions.id", ondelete="CASCADE"), nullable=False,
+                           index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    @staticmethod
+    def exists(session, user):
+        return LiveKick.query.filter_by(session_id=session.id, user_id=user.id).first() is not None
+
+
 # ---------------- Developer panel ----------------
 class SecurityEvent(db.Model):
     """Suspicious or noteworthy requests, shown in the developer panel."""

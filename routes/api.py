@@ -15,7 +15,7 @@ from sqlalchemy import func
 
 import livekit_util
 import storage
-from models import (KINDS, ApiToken, Content, DeployLog, LiveSession, PushDevice, SecurityEvent, SubCode,
+from models import (KINDS, ApiToken, Content, DeployLog, LiveKick, LiveSession, PushDevice, SecurityEvent, SubCode,
                     Subject, User, db, utcnow)
 from security import client_ip, limiter, log_event
 
@@ -285,6 +285,8 @@ def live_token():
         return err("ماكو بث هسه.", 404)
     if not livekit_util.configured():
         return err("البث غير مضبوط بالسيرفر (LiveKit).", 503)
+    if LiveKick.exists(s, g.user):
+        return err("انطلعت من البث من قبل الأستاذة.", 403, kicked=True)
     u = g.user
     name = f"{u.name} ({current_app.config['TEACHER_LABEL']})" if u.is_admin else u.name
     tok = livekit_util.join_token(identity=f"u{u.id}", name=name, room=s.room, is_admin=u.is_admin)

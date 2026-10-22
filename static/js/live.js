@@ -22,6 +22,36 @@
 
   function showError(msg) { joinError.textContent = msg; joinError.hidden = false; }
 
+  var KICKED_MSG = "انطلعت من البث من قبل الأستاذة.";
+  function kickedOut(msg) {
+    endedView(msg || KICKED_MSG);
+    setTimeout(function () { location.href = root.dataset.homeUrl; }, 4000);
+  }
+
+  // ---------- Teacher moderation ----------
+  function moderate(urlTemplate, identity, btn) {
+    btn.disabled = true;
+    return fetch(urlTemplate.replace("IDENT", encodeURIComponent(identity)), {
+      method: "POST", credentials: "same-origin", headers: { "X-CSRF-Token": window.CSRF }
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || "صار خطأ، جرّبي مرة ثانية.");
+        return d;
+      });
+    }).catch(function (err) {
+      alert(err && err.message ? err.message : String(err));
+    }).finally(function () { btn.disabled = false; });
+  }
+
+  function modButton(text, danger, onClick) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-sm mod" + (danger ? " btn-danger" : "");
+    b.textContent = text;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
   function roleOf(p) {
     try { return JSON.parse(p.metadata || "{}").role || "student"; } catch (e) { return "student"; }
   }
@@ -128,31 +158,66 @@
         var m = document.createElement("span"); m.className = "muted small"; m.textContent = "صامت";
         row.appendChild(m);
       }
+      if (isAdmin && !p.isLocal && roleOf(p) !== "teacher") {
+        var identity = p.identity, name = displayName(p);
+        row.appendChild(modButton("كتم", false, function () {
+          moderate(root.dataset.muteUrl, identity, this);
+        }));
+        row.appendChild(modButton("طرد", true, function () {
+          if (!confirm("متأكدة تريدين تطلعين " + name + " من البث؟ ما يكدر يرجع لهذا البث.")) return;
+          moderate(root.dataset.kickUrl, identity, this);
+        }));
+      }
       peopleEl.appendChild(row);
     });
     peopleCount.textContent = String(all.length);
   }
 
   // ---------- Chat ----------
-  function addChat(name, text, mine) {
+  // Messages live only in LiveKit (nothing is saved). The teacher can delete one for everyone: a "del"
+  // message names it by id (or by sender + text for messages sent without an id, e.g. from the app).
+  function newId() { return Math.random().toString(36).slice(2, 12); }
+
+  function addChat(name, text, mine, sender, id) {
     if (chatLog.querySelector(".muted")) chatLog.innerHTML = "";
     var m = document.createElement("div");
     m.className = "m";
+    m.dataset.sender = sender || "";
+    m.dataset.text = text;
+    if (id) m.dataset.id = id;
     var b = document.createElement("b");
     b.textContent = (mine ? "أنت" : name) + ": ";
     m.appendChild(b);
     m.appendChild(document.createTextNode(text));
+    if (isAdmin) {
+      m.appendChild(modButton("حذف", true, function () {
+        if (!room || !confirm("تحذفين هاي الرسالة عند الكل؟")) return;
+        var del = { t: "del", sender: m.dataset.sender, text: m.dataset.text };
+        if (m.dataset.id) del.id = m.dataset.id;
+        room.localParticipant.publishData(encoder.encode(JSON.stringify(del)), { reliable: true, topic: "chat" });
+        m.remove();
+      }));
+    }
     chatLog.appendChild(m);
     chatLog.scrollTop = chatLog.scrollHeight;
   }
 
+  function deleteChat(del) {
+    Array.prototype.forEach.call(chatLog.querySelectorAll(".m"), function (m) {
+      var same = del.id ? m.dataset.id === del.id
+                        : !m.dataset.id && m.dataset.sender === del.sender && m.dataset.text === del.text;
+      if (same) m.remove();
+    });
+  }
+
   chatForm.addEventListener("submit", function (e) {
     e.preventDefault();
-    var text = chatInput.value.trim();
+    var text = chatInput.value.trim().slice(0, 500);
     if (!text || !room) return;
-    var payload = encoder.encode(JSON.stringify({ t: "chat", text: text.slice(0, 500) }));
+    var id = newId();
+    var payload = encoder.encode(JSON.stringify({ t: "chat", text: text, id: id }));
     room.localParticipant.publishData(payload, { reliable: true, topic: "chat" });
-    addChat("", text, true);
+    addChat("", text, true, room.localParticipant.identity, id);
     chatInput.value = "";
   });
 
@@ -209,6 +274,7 @@
         headers: { "X-CSRF-Token": window.CSRF }
       });
       var data = await res.json().catch(function () { return {}; });
+      if (data.kicked) { kickedOut(data.error); return; }
       if (!res.ok) throw new Error(data.error || "ما كدرنا نجيب صلاحية الدخول.");
 
       room = new LK.Room({ adaptiveStream: true, dynacast: true });
@@ -251,8 +317,8 @@
     r.on(RoomEvent.ParticipantDisconnected, function (p) {
       removeTile(p, "camera"); removeTile(p, "screen"); renderPeople();
     });
-    r.on(RoomEvent.TrackMuted, renderPeople);
-    r.on(RoomEvent.TrackUnmuted, renderPeople);
+    r.on(RoomEvent.TrackMuted, function () { refreshButtons(); renderPeople(); });
+    r.on(RoomEvent.TrackUnmuted, function () { refreshButtons(); renderPeople(); });
     r.on(RoomEvent.ActiveSpeakersChanged, function (speakers) {
       var ids = {};
       speakers.forEach(function (s) { ids[s.identity] = true; });
@@ -265,16 +331,23 @@
       if (topic && topic !== "chat") return;
       try {
         var msg = JSON.parse(decoder.decode(payload));
-        if (msg.t === "chat" && typeof msg.text === "string") addChat(p ? displayName(p) : "؟", msg.text.slice(0, 500), false);
+        if (msg.t === "chat" && typeof msg.text === "string") {
+          addChat(p ? displayName(p) : "؟", msg.text.slice(0, 500), false, p ? p.identity : "",
+                  typeof msg.id === "string" ? msg.id.slice(0, 40) : "");
+        } else if (msg.t === "del" && p && roleOf(p) === "teacher") {
+          deleteChat({ id: typeof msg.id === "string" ? msg.id : "", sender: String(msg.sender || ""),
+                       text: String(msg.text || "") });
+        }
       } catch (e) {}
     });
     r.on(RoomEvent.Disconnected, function (reason) {
       Object.keys(tiles).forEach(function (k) { tiles[k].remove(); });
       tiles = {};
       audioSink.innerHTML = "";
-      var deleted = LK.DisconnectReason && reason === LK.DisconnectReason.ROOM_DELETED;
-      if (endedBox.hidden) endedView(deleted ? "انتهى البث" : "طلعت من الاتصال");
+      var R = LK.DisconnectReason || {};
       room = null;
+      if (reason === R.PARTICIPANT_REMOVED && !isAdmin) { kickedOut(); return; }
+      if (endedBox.hidden) endedView(reason === R.ROOM_DELETED ? "انتهى البث" : "طلعت من الاتصال");
     });
   }
 

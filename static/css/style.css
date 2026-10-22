@@ -291,6 +291,8 @@ code.c { font-weight: 600; letter-spacing: .05em; }
 .people .p .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-log { height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: .4rem; padding: .25rem; font-size: .92rem; }
 .chat-log .m b { color: var(--accent); font-weight: 600; }
+.people .p .mod, .chat-log .m .mod { flex: none; padding: .1rem .45rem; font-size: .78rem; }
+.chat-log .m .mod { margin-inline-start: .35rem; }
 .chat-form { display: flex; gap: .4rem; margin-top: .5rem; }
 .chat-form input { flex: 1; }
 
