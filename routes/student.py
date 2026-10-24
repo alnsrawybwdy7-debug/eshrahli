@@ -146,7 +146,7 @@ def watch(cid):
 @subscription_required
 def file(cid):
     c = get_visible_content(cid)
-    return redirect(storage.view_url(c, download=request.args.get("dl") == "1"))
+    return redirect(storage.view_url(c, download=False))  # ?dl=1 from old links is ignored
 
 
 @bp.route("/media/<path:key>")
@@ -161,7 +161,9 @@ def media(key):
         path = storage.local_path(key)
     except ValueError:
         abort(404)
-    return send_file(path, mimetype=c.mime, as_attachment=request.args.get("dl") == "1",
+    # PDFs, images and text always open in the browser; other types (docx...) still download
+    attach = request.args.get("dl") == "1" and c.mime not in storage.INLINE_TYPES
+    return send_file(path, mimetype=c.mime, as_attachment=attach,
                      download_name=c.filename, conditional=True, max_age=0)
 
 

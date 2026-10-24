@@ -44,6 +44,33 @@ def test_student_pages(app, client, data):
     assert client.get("/admin/").status_code == 404
 
 
+def test_files_open_in_the_browser_without_download_button(app, client, data):
+    with app.app_context():
+        from models import Subject
+        docx = make_content(db.session.get(Subject, data["sid"]), kind="summary", title="وورد", filename="a.docx")
+        docx.mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        db.session.commit()
+        docx_id = docx.id
+    web_login(client, "ali", "password1")
+    page = client.get(f"/subject/{data['sid']}?tab=summary").get_data(as_text=True)
+    assert "تنزيل" not in page and "dl=1" not in page and f"/file/{data['file']}" in page
+    # An old ?dl=1 link no longer forces a download of a PDF
+    for url in (f"/file/{data['file']}", f"/file/{data['file']}?dl=1"):
+        media = client.get(url).headers["Location"]
+        assert "dl=" not in media
+        r = client.get(media)
+        assert r.status_code == 200 and "attachment" not in r.headers.get("Content-Disposition", "")
+        r.close()
+    r = client.get(client.get(f"/file/{data['file']}").headers["Location"] + "?dl=1")
+    assert "attachment" not in r.headers.get("Content-Disposition", "")
+    r.close()
+    # Types the browser cannot show (docx...) still download as before
+    media = client.get(f"/file/{docx_id}").headers["Location"]
+    r = client.get(media)
+    assert r.status_code == 200 and r.headers["Content-Disposition"].startswith("attachment")
+    r.close()
+
+
 def test_unsubscribed_student(client, data):
     web_login(client, "noor", "password1")
     assert client.get("/").status_code in (200, 302, 303)
