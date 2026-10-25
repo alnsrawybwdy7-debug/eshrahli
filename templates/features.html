@@ -29,7 +29,7 @@
   <div class="fx-text">
     <span class="fx-num">1</span>
     <h2>كل مواد القسم مرتبة</h2>
-    <p>أول ما تدخل تشوف المواد المشترك بيها، وكل مادة إلها أقسام واضحة:</p>
+    <p>أول ما تدخل تشوف المواد المفعّلة بحسابك، وكل مادة إلها أقسام واضحة:</p>
     <ul class="fx-list">
       <li><b>فيديوات الشرح</b> مرتبة حسب المحاضرات.</li>
       <li><b>الملخصات</b> لأهم النقاط قبل الامتحان.</li>
@@ -70,7 +70,7 @@
   <div class="fx-text">
     <span class="fx-num live">4</span>
     <h2>بث مباشر ويا {{ teacher_label }}</h2>
-    <p>{{ teacher_label }} {{ teacher }} تفتح ميت مباشر للمراجعة قبل امتحان المد والفاينل، لمشتركي كل مادة.</p>
+    <p>{{ teacher_label }} {{ teacher }} تفتح ميت مباشر للمراجعة قبل امتحان المد والفاينل، لطلاب كل مادة.</p>
     <ul class="fx-list">
       <li>أول ما يبدي البث يطلعلك زر <b>«انضمام للاتصال»</b> بكل الصفحات.</li>
       <li>تشوف شاشة الشرح وتسمع الصوت مباشرة.</li>
@@ -85,19 +85,19 @@
 <section class="fx-row">
   <div class="fx-text">
     <span class="fx-num">5</span>
-    <h2>طريقة الاشتراك</h2>
+    <h2>طريقة التسجيل</h2>
     <ol class="fx-steps">
       <li><b>سوّي حساب</b><span>اسمك واسم مستخدم وكلمة مرور.</span></li>
-      <li><b>راسلنا على تيليكرام</b><span>{% if telegram_user %}على <span class="ltr">@{{ telegram_user }}</span>، و{% endif %}نرسلك رمز الاشتراك.</span></li>
-      <li><b>اكتب الرمز وابدأ</b><span>مدة اشتراكك تبدي من لحظة إدخال الرمز.</span></li>
+      <li><b>راسلنا على تيليكرام</b><span>{% if telegram_user %}على <span class="ltr">@{{ telegram_user }}</span>، و{% endif %}نرسلك رمز التفعيل.</span></li>
+      <li><b>اكتب الرمز وابدأ</b><span>مدة التفعيل تبدي من لحظة إدخال الرمز.</span></li>
     </ol>
   </div>
-  <figure class="fx-phone"><img src="{{ img('subscribe') }}" alt="صفحة تفعيل الاشتراك" loading="lazy" width="540" height="1169"></figure>
+  <figure class="fx-phone"><img src="{{ img('subscribe') }}" alt="صفحة تفعيل المواد" loading="lazy" width="540" height="1169"></figure>
 </section>
 
 <section class="fx-faq" id="prices">
-  <h2>أسعار الاشتراك</h2>
-  <p class="muted" style="text-align:center;margin-top:-.5rem">اشترك بالمادة اللي تحتاجها، أو بكل المواد مرة وحدة.</p>
+  <h2>أجور الدروس الحضورية</h2>
+  <p class="muted" style="text-align:center;margin-top:-.5rem">سجّل بدروس المادة اللي تحتاجها، أو بكل المواد مرة وحدة.</p>
   {% set pricing_cta = 'none' if g.user else 'register' %}
   {% include "_pricing.html" %}
 </section>
@@ -106,17 +106,17 @@
 <section class="fx-faq">
   <h2>أسئلة تتكرر</h2>
   <details class="box"><summary>أحتاج أنصّب برنامج؟</summary><p>لا. المنصة تشتغل من المتصفح على الموبايل والآيباد واللابتوب، وأكو إلها تطبيق Android.</p></details>
-  <details class="box"><summary>شنو الفرق بين اشتراك المادة وكل المواد؟</summary><p>اشتراك المادة يفتحلك مادة وحدة بكل محتواها وميتها. اشتراك كل المواد يفتحلك كل مواد القسم وكل الميتات بحساب واحد.</p></details>
-  <details class="box"><summary>أكدر أشترك بمادة وبعدين أضيف غيرها؟</summary><p>إي، كل رمز تضيفه يفتحلك المواد اللي بيه، واشتراكاتك تبقى كلها بنفس الحساب.</p></details>
-  <details class="box"><summary>المدة تبدي من وكت؟</summary><p>من لحظة تفعيل الرمز بحسابك، مو من وقت شرائه.</p></details>
-  <details class="box"><summary>إذا خلص اشتراكي شيصير؟</summary><p>حسابك يبقى موجود. تاخذ رمز جديد وتفعّله، ويرجع كلشي. وإذا جددت قبل لا يخلص، المدة الجديدة تنضاف على الباقية.</p></details>
-  <details class="box"><summary>أكدر أفتح حسابي من أكثر من جهاز؟</summary><p>الحساب شخصي ويشتغل على جهاز واحد بنفس الوقت. إذا سجّلت دخول من جهاز ثاني، يطلع الجهاز الأول تلقائياً. هذا حتى نحمي اشتراكك ومحتوى المنصة.</p></details>
-  <details class="box"><summary>الميت المباشر يتسجّل؟</summary><p>الميت ما يتسجّل تلقائياً، فحاول تحضره بوقته. ومن يبدي، يطلع زر الانضمام لمشتركي المادة بكل صفحات المنصة.</p></details>
+  <details class="box"><summary>شنو الفرق بين دروس مادة وحدة وكل المواد؟</summary><p>دروس المادة الوحدة تفتحلك بالمنصة مادة وحدة بكل محتواها وميتها. دروس كل المواد تفتحلك كل مواد القسم وكل الميتات بحساب واحد.</p></details>
+  <details class="box"><summary>أكدر أسجّل بمادة وبعدين أضيف غيرها؟</summary><p>إي، كل رمز تضيفه يفتحلك المواد اللي بيه، والمواد المفعّلة تبقى كلها بنفس الحساب.</p></details>
+  <details class="box"><summary>المدة تبدي من وكت؟</summary><p>من لحظة تفعيل الرمز بحسابك، مو من وقت ما استلمته.</p></details>
+  <details class="box"><summary>إذا خلصت مدة التفعيل شيصير؟</summary><p>حسابك يبقى موجود. تاخذ رمز جديد وتفعّله، ويرجع كلشي. وإذا جددت قبل لا يخلص، المدة الجديدة تنضاف على الباقية.</p></details>
+  <details class="box"><summary>أكدر أفتح حسابي من أكثر من جهاز؟</summary><p>الحساب شخصي ويشتغل على جهاز واحد بنفس الوقت. إذا سجّلت دخول من جهاز ثاني، يطلع الجهاز الأول تلقائياً. هذا حتى نحمي حسابك ومحتوى المنصة.</p></details>
+  <details class="box"><summary>الميت المباشر يتسجّل؟</summary><p>الميت ما يتسجّل تلقائياً، فحاول تحضره بوقته. ومن يبدي، يطلع زر الانضمام لطلاب المادة بكل صفحات المنصة.</p></details>
 </section>
 
 <section class="fx-final card">
   <h2>جاهز تبدي؟</h2>
-  <p class="muted">{{ 'سجّل دخولك وابدأ بالمواد.' if in_app else 'سوّي حسابك وراسلنا حتى نرسلك رمز الاشتراك.' }}</p>
+  <p class="muted">{{ 'سجّل دخولك وابدأ بالمواد.' if in_app else 'سوّي حسابك وراسلنا حتى تسجّل بالدروس ونرسلك رمز التفعيل.' }}</p>
   <div class="fx-cta">
     {% if not g.user %}<a class="btn btn-primary" href="{{ url_for('auth.register') }}">سوّي حساب</a>{% endif %}
     {% if telegram_url and not in_app %}<a class="btn btn-tg" href="{{ telegram_url }}" target="_blank" rel="noopener">{{ tg_icon() }} راسلنا على تيليكرام</a>{% endif %}
