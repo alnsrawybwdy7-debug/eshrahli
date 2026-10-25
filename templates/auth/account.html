@@ -9,13 +9,13 @@
     <table>
       <tr><th>الاسم</th><td>{{ g.user.name }}</td></tr>
       <tr><th>اسم المستخدم</th><td class="ltr">{{ g.user.username }}</td></tr>
-      <tr><th>الاشتراك</th><td>{{ sub_badge(g.user) }}</td></tr>
+      <tr><th>التفعيل</th><td>{{ sub_badge(g.user) }}</td></tr>
       {% for x in g.user.subscriptions %}
       <tr><th>{{ x.label }}</th><td>{% if x.active %}ينتهي {{ x.expires|local('%Y/%m/%d') }} <span class="muted small">(باقي {{ x.days }} يوم)</span>{% else %}<span class="badge warn">منتهي</span>{% endif %}</td></tr>
       {% endfor %}
     </table>
     <div class="row" style="margin-top:1rem">
-      {% if not g.user.is_admin %}<a class="btn" href="{{ url_for('student.subscribe') }}">{{ 'اشتراكاتي' if in_app else 'تجديد / تفعيل الاشتراك' }}</a>{% endif %}
+      {% if not g.user.is_admin %}<a class="btn" href="{{ url_for('student.subscribe') }}">{{ 'موادي المفعّلة' if in_app else 'تفعيل / تجديد المواد' }}</a>{% endif %}
       {% if telegram_url and not in_app %}<a class="btn btn-ghost" href="{{ telegram_url }}" target="_blank" rel="noopener">تواصل <span class="ltr">@{{ telegram_user }}</span></a>{% endif %}
     </div>
     <form method="post" action="{{ url_for('auth.logout') }}" style="margin-top:1rem">
@@ -39,8 +39,8 @@
 {% if not g.user.is_admin %}
 <div class="card danger-zone" id="delete">
   <h2>حذف الحساب</h2>
-  <p class="muted">ينحذف حسابك واسمك وكل اشتراكاتك نهائياً، وما يرجع. أي مدة متبقية باشتراكك تروح ويا الحساب. <a href="{{ url_for('auth.privacy') }}">سياسة الخصوصية</a></p>
-  <form method="post" action="{{ url_for('auth.delete_account') }}" data-confirm="متأكد؟ الحساب وكل اشتراكاته راح تنحذف نهائياً.">
+  <p class="muted">ينحذف حسابك واسمك وكل المواد المفعّلة بيه نهائياً، وما يرجع. أي مدة تفعيل متبقية تروح ويا الحساب. <a href="{{ url_for('auth.privacy') }}">سياسة الخصوصية</a></p>
+  <form method="post" action="{{ url_for('auth.delete_account') }}" data-confirm="متأكد؟ الحساب وكل المواد المفعّلة بيه راح تنحذف نهائياً.">
     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <div class="field"><label for="del-password">كلمة المرور</label><input id="del-password" name="password" type="password" class="ltr" autocomplete="current-password" required></div>
     <label class="check"><input type="checkbox" name="confirm" value="1" required> أفهم إن الحذف نهائي</label>

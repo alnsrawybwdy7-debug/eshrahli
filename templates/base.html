@@ -30,7 +30,7 @@
         <a href="{{ url_for('live.room') }}" class="{{ 'active' if ep == 'live.room' }}">البث المباشر</a>
       {% endif %}
       {% if not g.user.is_admin %}
-        <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">{{ 'اشتراكي' if in_app else 'الاشتراك' }}</a>
+        <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">التفعيل</a>
       {% endif %}
       {% if g.user.is_admin %}
         <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">لوحة التحكم</a>
@@ -90,7 +90,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>التحكم</span></a>
   {% else %}
   <a href="{{ url_for('student.subscribe') }}" class="{{ 'active' if ep == 'student.subscribe' }}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3"/><circle cx="12" cy="6" r="3"/><path d="M12 9v4"/></svg><span>{{ 'اشتراكي' if in_app else 'الاشتراك' }}</span></a>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3"/><circle cx="12" cy="6" r="3"/><path d="M12 9v4"/></svg><span>التفعيل</span></a>
   {% endif %}
   <a href="{{ url_for('auth.account') }}" class="{{ 'active' if ep == 'auth.account' }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>حسابي</span></a>

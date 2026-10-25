@@ -33,5 +33,5 @@
 {% elif u.sub_status == 'active' %}<span class="badge ok">فعّال · {{ u.days_left }} يوم</span>
 {% elif u.sub_status == 'expired' %}<span class="badge warn">منتهي</span>
 {% elif u.sub_status == 'admin' %}<span class="badge">أدمن</span>
-{% else %}<span class="badge">غير مشترك</span>{% endif %}
+{% else %}<span class="badge">غير مفعّل</span>{% endif %}
 {%- endmacro %}
