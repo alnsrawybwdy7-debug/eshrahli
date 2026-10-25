@@ -59,7 +59,7 @@ class Config:
     PRICE_ALL = int(os.getenv("PRICE_ALL", "150000"))
     CURRENCY = os.getenv("CURRENCY", "دينار")
     PLAN_INCLUDES = [x.strip() for x in os.getenv(
-        "PLAN_INCLUDES", "شروحات|ملخصات|تقارير|ميت قبل امتحان المد والفاينل").split("|") if x.strip()]
+        "PLAN_INCLUDES", "دروس حضورية ويا الأستاذة|شروحات|ملخصات|تقارير|ميت قبل امتحان المد والفاينل").split("|") if x.strip()]
     CONTACT_WHATSAPP = os.getenv("CONTACT_WHATSAPP", "").strip()  # e.g. 9647800000000 (optional)
     CONTACT_TELEGRAM = os.getenv("CONTACT_TELEGRAM", "nomiya_0").strip().lstrip("@")  # username
     CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "").strip()  # shown on the privacy page (optional)

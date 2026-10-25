@@ -139,7 +139,7 @@ def subscription_required(view):
         if not g.user:
             return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
         if not g.user.has_active_sub:
-            flash("اشتراكك غير مفعّل أو منتهي. فعّل اشتراكك حتى تكدر تدخل.", "warn")
+            flash("موادك غير مفعّلة أو انتهت مدة التفعيل. فعّل موادك حتى تكدر تدخل.", "warn")
             return redirect(url_for("student.subscribe"))
         return view(*a, **kw)
     return wrapped

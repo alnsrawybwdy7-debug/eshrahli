@@ -31,9 +31,9 @@ def kind_counts(subject_ids=None, include_hidden=False):
 
 def no_access(subject):
     if g.get("in_app"):
-        flash(f"مادة «{subject.name}» مو ضمن اشتراكك.", "warn")
+        flash(f"مادة «{subject.name}» غير مفعّلة بحسابك.", "warn")
     else:
-        flash(f"مادة «{subject.name}» مو ضمن اشتراكك. اشترك بيها أو بكل المواد حتى تفتحها.", "warn")
+        flash(f"مادة «{subject.name}» غير مفعّلة بحسابك. فعّلها برمز حتى تفتحها.", "warn")
     return redirect(url_for("student.subscribe", subject=subject.id))
 
 
@@ -100,7 +100,7 @@ def subscribe():
             db.session.rollback()
             flash("صار خطأ أثناء التفعيل، جرّب مرة ثانية.", "error")
             return redirect(url_for("student.subscribe"))
-        flash(f"تم تفعيل اشتراكك ({label}) لمدة {code.days} يوم. بالتوفيق!", "ok")
+        flash(f"تم تفعيل موادك ({label}) لمدة {code.days} يوم. بالتوفيق!", "ok")
         return redirect(url_for("student.home"))
     c = current_app.config
     subjects = Subject.query.filter_by(is_visible=True).order_by(Subject.position, Subject.id).all()

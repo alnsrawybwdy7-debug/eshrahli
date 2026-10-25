@@ -7,7 +7,7 @@
 <section class="fx-hero">
   <div class="brand-mark fx-logo">{{ logo() }}</div>
   <h1>ماذا نقدم لكم بمنصة <em>{{ site_name }}</em>؟</h1>
-  <p class="fx-lead">{{ site_tagline }}. كل اللي تحتاجه للمادة بمكان واحد: شروحات بالفيديو، ملخصات، تقارير، وميت مباشر ويا {{ teacher_label }} {{ teacher }} قبل امتحان المد والفاينل.</p>
+  <p class="fx-lead">منصة {{ site_name }} مكمّلة لدروس {{ teacher_label }} {{ teacher }} الحضورية، ومخصصة لطلابها. كل اللي تحتاجه للمادة بمكان واحد: شروحات بالفيديو، ملخصات، تقارير، وميت مباشر قبل امتحان المد والفاينل.</p>
   <div class="fx-cta">
     {% if g.user %}
       <a class="btn btn-primary" href="{{ url_for('student.home') }}">ادخل للمواد</a>
@@ -105,7 +105,7 @@
 
 <section class="fx-faq">
   <h2>أسئلة تتكرر</h2>
-  <details class="box"><summary>أحتاج أنصّب برنامج؟</summary><p>لا. المنصة تشتغل من المتصفح على الموبايل والآيباد واللابتوب، وأكو إلها تطبيق Android.</p></details>
+  <details class="box"><summary>أحتاج أنصّب برنامج؟</summary><p>لا. المنصة تشتغل من المتصفح على الموبايل والآيباد واللابتوب، وأكو إلها تطبيق Android و iPhone.</p></details>
   <details class="box"><summary>شنو الفرق بين دروس مادة وحدة وكل المواد؟</summary><p>دروس المادة الوحدة تفتحلك بالمنصة مادة وحدة بكل محتواها وميتها. دروس كل المواد تفتحلك كل مواد القسم وكل الميتات بحساب واحد.</p></details>
   <details class="box"><summary>أكدر أسجّل بمادة وبعدين أضيف غيرها؟</summary><p>إي، كل رمز تضيفه يفتحلك المواد اللي بيه، والمواد المفعّلة تبقى كلها بنفس الحساب.</p></details>
   <details class="box"><summary>المدة تبدي من وكت؟</summary><p>من لحظة تفعيل الرمز بحسابك، مو من وقت ما استلمته.</p></details>

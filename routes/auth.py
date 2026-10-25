@@ -93,7 +93,7 @@ def register():
             db.session.add(user)
             db.session.commit()
             start_session(user)
-            flash("تم إنشاء حسابك. هسه فعّل اشتراكك.", "ok")
+            flash("تم إنشاء حسابك. هسه فعّل موادك.", "ok")
             return redirect(url_for("student.subscribe"))
     return render_template("auth/register.html", form=form)
 
