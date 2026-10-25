@@ -128,6 +128,7 @@ def test_subjects_open_and_locked(app, client):
     assert items[1]["counts"] == {"video": 1, "summary": 1, "homework": 0}  # hidden content not counted
     locked = client.get(f"/api/v1/subjects/{sid1}", headers=bearer(t))
     assert locked.status_code == 403 and locked.get_json()["locked"] is True
+    assert "اشتراك" not in locked.get_json()["error"]  # App Review 3.1.1: enrollment wording only
     ok = client.get(f"/api/v1/subjects/{sid2}", headers=bearer(t))
     assert ok.status_code == 200 and set(ok.get_json()["subject"]["contents"]) == {"video", "summary", "homework"}
     assert client.get("/api/v1/subjects/999", headers=bearer(t)).status_code == 404
@@ -172,6 +173,7 @@ def test_open_content_locked_subject(app, client):
     t = api_login(client)
     r = client.get(f"/api/v1/contents/{cid}/open", headers=bearer(t))
     assert r.status_code == 403 and r.get_json()["locked"] is True
+    assert "اشتراك" not in r.get_json()["error"]
 
 
 def test_media_link_dies_when_subscription_ends(app, client):

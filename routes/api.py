@@ -218,7 +218,7 @@ def subject(sid):
     if not s or (not s.is_visible and not g.user.is_admin):
         return err("المادة غير موجودة.", 404)
     if not g.user.can_access(s.id):
-        return err(f"مادة «{s.name}» مو ضمن اشتراكك.", 403, locked=True)
+        return err(f"مادة «{s.name}» غير مفعّلة بحسابك.", 403, locked=True)
     q = Content.query.filter_by(subject_id=sid)
     if not g.user.is_admin:
         q = q.filter_by(is_visible=True)
@@ -236,7 +236,7 @@ def open_content(cid):
     if not c:
         return err("الملف غير موجود.", 404)
     if not g.user.can_access(c.subject_id):
-        return err(f"مادة «{c.subject.name}» مو ضمن اشتراكك.", 403, locked=True)
+        return err(f"مادة «{c.subject.name}» غير مفعّلة بحسابك.", 403, locked=True)
     if storage.r2_enabled():
         url = storage.view_url(c)
     else:
