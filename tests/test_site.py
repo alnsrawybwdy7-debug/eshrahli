@@ -53,17 +53,14 @@ def test_files_open_in_the_browser_without_download_button(app, client, data):
         docx_id = docx.id
     web_login(client, "ali", "password1")
     page = client.get(f"/subject/{data['sid']}?tab=summary").get_data(as_text=True)
-    assert "تنزيل" not in page and "dl=1" not in page and f"/file/{data['file']}" in page
-    # An old ?dl=1 link no longer forces a download of a PDF
-    for url in (f"/file/{data['file']}", f"/file/{data['file']}?dl=1"):
-        media = client.get(url).headers["Location"]
-        assert "dl=" not in media
-        r = client.get(media)
+    assert "تنزيل" not in page and "dl=1" not in page and f"/files/{data['file']}/view" in page
+    # The PDF bytes the viewer fetches open inline, even with an old ?dl=1, and are never cached
+    media = client.get(f"/files/{data['file']}/source").get_json()["url"]
+    for url in (media, media + "?dl=1"):
+        r = client.get(url)
         assert r.status_code == 200 and "attachment" not in r.headers.get("Content-Disposition", "")
+        assert r.headers["Cache-Control"] == "no-store"
         r.close()
-    r = client.get(client.get(f"/file/{data['file']}").headers["Location"] + "?dl=1")
-    assert "attachment" not in r.headers.get("Content-Disposition", "")
-    r.close()
     # Types the browser cannot show (docx...) still download as before
     media = client.get(f"/file/{docx_id}").headers["Location"]
     r = client.get(media)

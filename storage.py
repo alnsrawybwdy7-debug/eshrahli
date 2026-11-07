@@ -148,6 +148,27 @@ def view_url(content, download=False):
     return url_for("student.media", key=content.storage_key, dl=1 if download else None)
 
 
+PDF_SOURCE_TTL = 300  # seconds: the in-site viewer fetches the file once, right after asking
+
+
+def pdf_source_url(content):
+    """Short-lived URL the in-site PDF viewer (pdf.js) fetches the bytes from. With R2 it is a presigned
+    GET signed locally (no network), so it works on PythonAnywhere's free plan; needs CORS on the bucket."""
+    if r2_enabled():
+        return r2().generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": current_app.config["R2_BUCKET"],
+                "Key": content.storage_key,
+                "ResponseContentType": "application/pdf",
+                "ResponseContentDisposition": _disposition(content.filename, False),
+                "ResponseCacheControl": "no-store",
+            },
+            ExpiresIn=PDF_SOURCE_TTL,
+        )
+    return url_for("student.media", key=content.storage_key)
+
+
 def delete(key):
     try:
         if r2_enabled():

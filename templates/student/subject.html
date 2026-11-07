@@ -37,7 +37,11 @@
       <span class="sub">{% if c.description %}{{ c.description }} · {% endif %}{{ c.filename.rsplit('.', 1)[-1]|upper }} · {{ c.size|filesize }} · {{ c.created_at|local('%Y/%m/%d') }}</span>
     </div>
     <div class="item-actions">
+      {% if c.mime == 'application/pdf' %}
+      <a class="btn btn-sm" href="{{ url_for('student.pdf_view', cid=c.id) }}">فتح</a>
+      {% else %}
       <a class="btn btn-sm" href="{{ url_for('student.file', cid=c.id) }}" target="_blank" rel="noopener">فتح</a>
+      {% endif %}
     </div>
   </div>
   {% endif %}

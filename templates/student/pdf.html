@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ c.title }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('student.home') }}">المواد</a> / <a href="{{ url_for('student.subject', sid=c.subject_id, tab=c.kind) }}">{{ c.subject.name }}</a></div>
+<h1 class="pdf-title">{{ c.title }}</h1>
+
+<div id="pdf-root" class="pdf-viewer"
+     data-source-url="{{ url_for('student.pdf_source', cid=c.id) }}"
+     data-lib="{{ url_for('static', filename='vendor/pdfjs-4.10.38/pdf.min.js') }}"
+     data-worker="{{ url_for('static', filename='vendor/pdfjs-4.10.38/pdf.worker.min.js') }}"
+     data-cmaps="{{ url_for('static', filename='vendor/pdfjs-4.10.38/cmaps/') }}"
+     data-fonts="{{ url_for('static', filename='vendor/pdfjs-4.10.38/standard_fonts/') }}"
+     data-wm="{{ g.user.username }}">
+  <div class="pdf-toolbar" role="toolbar" aria-label="أدوات العرض">
+    <span class="pdf-pages" id="pdf-pages" aria-live="polite">جاري التحميل...</span>
+    <div class="pdf-zoom">
+      <button class="btn btn-sm" type="button" id="pdf-zoom-out" aria-label="تصغير" disabled>−</button>
+      <span class="pdf-zoom-level ltr" id="pdf-zoom-level">100%</span>
+      <button class="btn btn-sm" type="button" id="pdf-zoom-in" aria-label="تكبير" disabled>+</button>
+      <button class="btn btn-sm btn-ghost" type="button" id="pdf-fit" disabled>ملائمة العرض</button>
+    </div>
+  </div>
+  <div class="pdf-error notice" id="pdf-error" hidden></div>
+  <div class="pdf-pages-wrap" id="pdf-scroll">
+    <div class="pdf-stack" id="pdf-stack"></div>
+  </div>
+  <noscript><div class="notice">العارض يحتاج JavaScript.</div></noscript>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/pdf-viewer.js') }}"></script>{% endblock %}

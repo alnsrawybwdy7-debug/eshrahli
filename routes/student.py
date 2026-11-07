@@ -1,8 +1,8 @@
 import re
 from datetime import timedelta
 
-from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request,
-                   send_file, url_for)
+from flask import (Blueprint, abort, current_app, flash, g, jsonify, make_response, redirect, render_template,
+                   request, send_file, url_for)
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
@@ -146,7 +146,46 @@ def watch(cid):
 @subscription_required
 def file(cid):
     c = get_visible_content(cid)
+    if c.mime == PDF_MIME:
+        return redirect(url_for("student.pdf_view", cid=cid))
     return redirect(storage.view_url(c, download=False))  # ?dl=1 from old links is ignored
+
+
+# ---------------- in-site PDF viewer (pdf.js, no download / print buttons) ----------------
+PDF_MIME = "application/pdf"
+
+
+def viewer_content(cid):
+    """Like get_visible_content, but a student without access gets 403 instead of a redirect."""
+    c = db.session.get(Content, cid) or abort(404)
+    if not g.user.is_admin and (not c.is_visible or not c.subject.is_visible):
+        abort(404)
+    if c.mime != PDF_MIME:
+        abort(404)
+    if not g.user.is_admin and not g.user.has_active_sub:
+        abort(403, description="اشتراكك غير مفعّل أو منتهي. فعّل اشتراكك حتى تفتح الملف.")
+    if not g.user.can_access(c.subject_id):
+        abort(403, description=f"مادة «{c.subject.name}» غير مفعّلة بحسابك.")
+    return c
+
+
+@bp.route("/files/<int:cid>/view")
+@login_required
+def pdf_view(cid):
+    c = viewer_content(cid)
+    resp = make_response(render_template("student/pdf.html", c=c))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@bp.route("/files/<int:cid>/source")
+@login_required
+def pdf_source(cid):
+    """A fresh short-lived URL for the viewer's single fetch of the file (never put in the page HTML)."""
+    c = viewer_content(cid)
+    resp = jsonify(url=storage.pdf_source_url(c))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @bp.route("/media/<path:key>")
@@ -163,8 +202,11 @@ def media(key):
         abort(404)
     # PDFs, images and text always open in the browser; other types (docx...) still download
     attach = request.args.get("dl") == "1" and c.mime not in storage.INLINE_TYPES
-    return send_file(path, mimetype=c.mime, as_attachment=attach,
+    resp = send_file(path, mimetype=c.mime, as_attachment=attach,
                      download_name=c.filename, conditional=True, max_age=0)
+    if c.mime == PDF_MIME:
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @bp.route("/api/live-status")
